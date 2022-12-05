@@ -32,6 +32,7 @@
 #include "TunnelCutter.h"
 
 #include "vislib/Trace.h"
+#include "SalientFrameRenderer2D.h"
 
 namespace megamol::protein_gl {
 class ProteinGLPluginInstance : public megamol::core::utility::plugins::AbstractPluginInstance {
@@ -66,6 +67,7 @@ public:
         this->module_descriptions.RegisterAutoDescription<megamol::protein_gl::MSMSGenus0Generator>();
         this->module_descriptions.RegisterAutoDescription<megamol::protein_gl::MSMSMeshLoader>();
         this->module_descriptions.RegisterAutoDescription<megamol::protein_gl::TunnelCutter>();
+        this->module_descriptions.RegisterAutoDescription<megamol::protein_gl::SalientFrameRenderer2D>();
 
         // register calls
     }

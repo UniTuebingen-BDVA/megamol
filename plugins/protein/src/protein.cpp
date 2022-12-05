@@ -13,6 +13,7 @@
 
 // data sources
 #include "AggregatedDensity.h"
+#include "BALDLoader.h"
 #include "BindingSiteDataSource.h"
 #include "CaverTunnelResidueLoader.h"
 #include "CrystalStructureDataSource.h"
@@ -45,6 +46,8 @@
 #include "TunnelToParticles.h"
 
 #include "vislib/Trace.h"
+#include "MDFrameSaliency.h"
+#include "protein_calls/BALDCall.h"
 
 namespace megamol::protein {
 class ProteinPluginInstance : public megamol::core::utility::plugins::AbstractPluginInstance {
@@ -87,6 +90,8 @@ public:
         this->module_descriptions.RegisterAutoDescription<megamol::protein::TunnelToBFactor>();
         this->module_descriptions.RegisterAutoDescription<megamol::protein::TunnelToParticles>();
         this->module_descriptions.RegisterAutoDescription<megamol::protein::UncertaintyDataLoader>();
+        this->module_descriptions.RegisterAutoDescription<megamol::protein::BALDLoader>();
+        this->module_descriptions.RegisterAutoDescription<megamol::protein::MDFrameSaliency>();
 
         // register calls
         this->call_descriptions.RegisterAutoDescription<megamol::protein::SolPathDataCall>();

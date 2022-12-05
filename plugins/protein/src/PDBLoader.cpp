@@ -841,9 +841,10 @@ bool PDBLoader::getData(core::Call& call) {
         this->loadFileCap(this->capFilenameSlot.Param<core::param::FilePathParam>()->Value());
     }
 
-    if (this->pdbFilenameSlot.IsDirty() || this->solventResidues.IsDirty()) {
+    if (this->pdbFilenameSlot.IsDirty() || this->solventResidues.IsDirty()|| this->xtcFilenameSlot.IsDirty()) {
         this->pdbFilenameSlot.ResetDirty();
         this->solventResidues.ResetDirty();
+        this->xtcFilenameSlot.ResetDirty();
         this->loadFile(this->pdbFilenameSlot.Param<core::param::FilePathParam>()->Value());
         this->pdbfilename =
             this->pdbFilenameSlot.Param<core::param::FilePathParam>()->Value().generic_u8string().c_str();
@@ -983,9 +984,10 @@ bool PDBLoader::getExtent(core::Call& call) {
             this->capFilenameSlot.Param<core::param::FilePathParam>()->Value().generic_u8string().c_str());
     }
 
-    if (this->pdbFilenameSlot.IsDirty() || this->solventResidues.IsDirty()) {
+    if (this->pdbFilenameSlot.IsDirty() || this->solventResidues.IsDirty()|| this->xtcFilenameSlot.IsDirty()) {
         this->pdbFilenameSlot.ResetDirty();
         this->solventResidues.ResetDirty();
+        this->xtcFilenameSlot.ResetDirty();
         this->loadFile(this->pdbFilenameSlot.Param<core::param::FilePathParam>()->Value().generic_u8string().c_str());
         this->pdbfilename =
             this->pdbFilenameSlot.Param<core::param::FilePathParam>()->Value().generic_u8string().c_str();

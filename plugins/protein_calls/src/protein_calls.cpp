@@ -20,6 +20,8 @@
 #include "protein_calls/UncertaintyDataCall.h"
 #include "protein_calls/VTIDataCall.h"
 #include "protein_calls/VariantMatchDataCall.h"
+#include "protein_calls/BALDCall.h"
+#include "protein_calls/SalientFrameCall.h"
 
 namespace megamol::protein_calls {
 class ProteinCallsPluginInstance : public megamol::core::utility::plugins::AbstractPluginInstance {
@@ -51,6 +53,8 @@ public:
         this->call_descriptions.RegisterAutoDescription<megamol::protein_calls::TunnelResidueDataCall>();
         this->call_descriptions.RegisterAutoDescription<megamol::protein_calls::RamachandranDataCall>();
         this->call_descriptions.RegisterAutoDescription<megamol::protein_calls::UncertaintyDataCall>();
+        this->call_descriptions.RegisterAutoDescription<megamol::protein_calls::BALDCall>();
+        this->call_descriptions.RegisterAutoDescription<megamol::protein_calls::SalientFrameCall>();
     }
 };
 } // namespace megamol::protein_calls
