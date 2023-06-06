@@ -599,7 +599,7 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
     int xx = std::get<1>(bla);
 
     //TEST KUGEL ZUM DEBUGGEN in grün
-    std::vector<int> zusatz = {79, 80, 337, 248}; //84 == 80 247 oder 333
+    std::vector<int> zusatz = {79, 80, 337, 248, 86, 87, 89, 93, 95, 32, 97, 17, 110, 111, 116, 120}; //84 == 80 247 oder 333
 
     for (int i :zusatz) {
 
@@ -756,26 +756,36 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
     for (int atom = 0; atom < edgeVerticesPerAtom.size(); ++atom) {
         for (int vertices = 0; vertices < edgeVerticesPerAtom[atom].size(); vertices = vertices + 2) {
             unsigned int a = edgeVerticesPerAtom[atom].at(vertices + 0); // 79
+            unsigned int b = edgeVerticesPerAtom[atom].at(vertices + 1); // 80
             std::vector<unsigned int> finde_79 = findNearestVertice(edgeVerticesPerAtom, edgeVerticesPerAtom[atom].at(vertices + 0),
-                edgeVerticesPerAtom[atom].at(vertices + 1), vertex, atom);
+                vertex, atom);
+            std::vector<unsigned int> finde_80 = findNearestVertice(edgeVerticesPerAtom, edgeVerticesPerAtom[atom].at(vertices + 1),
+                vertex, atom);
             // schau, ob 337 79 verbindung schon da ist
-            for (int i = 0; i < 3; ++i) { //tuple
-                for (int j = 0; j < referenceToOtherVertice.at(a).size(); ++j) {
-                    if (finde_79.at(i) == std::get<0>(referenceToOtherVertice.at(a).at(j))) {
-                        // verbindung gibt's schon
+            bool verbindung_Vorhanden = false;
+            for (int i = 0; i < 3; ++i) { //liste aus 3 nächsten Vertices
+                for (auto & j : referenceToOtherVertice.at(a)) { // Liste aus Vertices mit Verbindung zum aktuellen Vertice
+                    if (finde_79.at(i) == std::get<0>(j)) {
+                        verbindung_Vorhanden = true;
                     }
                 }
-
             }
+            if (!verbindung_Vorhanden){ //Baue Verbindung zum nächsten Vertice, beschreibe das in die Faces liste, mache dreieck fertig
+                std::tuple first = {finde_79.at(0), 1};
+                std::tuple second = {a, 1};
+                referenceToOtherVertice.at(a).emplace_back(first);
+                referenceToOtherVertice.at(finde_79.at(0)).emplace_back(second);
+                face.push_back(a); // 79
+                face.push_back(b);
+                face.push_back(finde_79.at(0)); //337
+            }
+
             referenceToOtherVertice.at(79);
             //337, 248
-
-            std::vector<unsigned int> finde_80 = findNearestVertice(edgeVerticesPerAtom, edgeVerticesPerAtom[atom].at(vertices + 1),
-                edgeVerticesPerAtom[atom].at(vertices + 1), vertex, atom);
             std::vector<unsigned int> finde_248 = findNearestVertice(edgeVerticesPerAtom, edgeVerticesPerAtom[1].at(4),
-                edgeVerticesPerAtom[atom].at(4), vertex, 1);
+                vertex, 1);
             std::vector<unsigned int> finde_341 = findNearestVertice(edgeVerticesPerAtom, edgeVerticesPerAtom[1].at(9),
-                edgeVerticesPerAtom[atom].at(4), vertex, 1);
+                vertex, 1);
 
             bool found = false;
             int index = INT_MIN;
@@ -854,12 +864,14 @@ bool MoleculeSESMeshRenderer::getExtentCallback(core::Call& caller) {
  * MoleculeSESMeshRenderer::findNearestVertice
  */
 std::vector<unsigned int> MoleculeSESMeshRenderer::findNearestVertice(const std::vector<std::vector<unsigned int>>& edgelord,
-    unsigned int& referenceIndex0, unsigned int& referenceIndex1, const std::vector<float>& vertex, int index) {
+    unsigned int& referenceIndex0, const std::vector<float>& vertex, int index) {
     /* Int referenceIndex ist vetice index, edgelord ist
      * edgelord ist kanten vector
      *
      * gl point
      */
+    //TODO: Baue Winkel ein
+    float winkelFaktor = 1;
     float referenceIndexX = (vertex.at(referenceIndex0 * 3 + 0) + vertex.at(referenceIndex0 * 3 + 0)) / 2;
     float referenceIndexY = (vertex.at(referenceIndex0 * 3 + 1) + vertex.at(referenceIndex0 * 3 + 1)) / 2;
     float referenceIndexZ = (vertex.at(referenceIndex0 * 3 + 2) + vertex.at(referenceIndex0 * 3 + 2)) / 2;
@@ -878,7 +890,7 @@ std::vector<unsigned int> MoleculeSESMeshRenderer::findNearestVertice(const std:
                               (referenceIndexY - vertex.at(i * 3 + 1)) * (referenceIndexY - vertex.at(i * 3 + 1)) +
                               (referenceIndexZ - vertex.at(i * 3 + 2)) * (referenceIndexZ - vertex.at(i * 3 + 2)));
 
-                if (dist > 0 && dist < nearestDistance) {
+                if (dist > 0 && dist * winkelFaktor < nearestDistance) {
                     if (i != indexOfNearestVertex){
                         thirdNearestDistance = secondNearestDistance;
                         secondNearestDistance = nearestDistance;
@@ -888,6 +900,7 @@ std::vector<unsigned int> MoleculeSESMeshRenderer::findNearestVertice(const std:
                         indexOfSecondNearestVertex = indexOfNearestVertex;
                         indexOfNearestVertex = i;
                     }}
+                //TODO: hier auch nochmal nach winkel schauen
                 else if (dist < secondNearestDistance){
                     if (i != indexOfNearestVertex) {
                         thirdNearestDistance = secondNearestDistance;
@@ -926,3 +939,20 @@ std::vector<std::vector<unsigned int>> MoleculeSESMeshRenderer::getMultipleVerti
     }
     return multipleVertexVector;
 }
+std::vector<unsigned int> MoleculeSESMeshRenderer::findVector(const std::vector<unsigned int>& edgelord) {
+    // Finde Winkel zu anderem Punkt
+    /*  Gegeben: Punkt A, Punkt B; A auf Atom A, B auf Atom B
+     * gegeben Schnittkreis
+     * Berechne nächsten Punkt auf Kreis zu Punkt A,
+     * Strecke Kreisebene Punkt A
+     * Strecke Ounkt A und Punkt B
+     * Berechne Winkel zwischen den zwei Strecken
+     * gebe winkel zurück
+     */
+    return {};
+}
+// stichworte rein schreiben, was muss rein, aus den stichworten sätze machen und dann sätze verbessern
+/* anfangshürde klein machen und stichpunkte, 2,3 worte für jeden Absatz etc
+ * eltech language tool
+ *
+ */

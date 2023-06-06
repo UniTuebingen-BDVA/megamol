@@ -127,7 +127,7 @@ private:
      * @return 'true' on success, 'false' on failure.
      */
     std::vector<unsigned int> findNearestVertice(const std::vector<std::vector<unsigned int>>& edgelord,
-        unsigned int& referenceIndex0, unsigned int& referenceIndex1, const std::vector<float>& vertex, int index);
+        unsigned int& referenceIndex0, const std::vector<float>& vertex, int index);
 
     /**
      * Gets the data from the source.
@@ -282,6 +282,7 @@ private:
 
     DeferredRenderingProvider deferredProvider_;
     static std::vector<std::vector<unsigned int>> getMultipleVertices(Icosphere* pIcosphere);
+    std::vector<unsigned int> findVector(const std::vector<unsigned int>& edgelord);
 };
 
 } // namespace protein_gl
