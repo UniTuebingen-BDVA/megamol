@@ -831,8 +831,7 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                 // sets the additional triangles for sewing the Ico spheres together
                 if (isStitching) {
                     int firstNearestVertex =
-                        findNearestVertice(edgeVerticesPerAtom, edgeVerticesPerAtom[atom].at(vertices + 0),
-                            edgeVerticesPerAtom[atom].at(vertices + 1), vertex, atom)[0];
+                        findNearestVertice(edgeVerticesPerAtom, edgeVerticesPerAtom[atom].at(vertices + 0), vertex, atom)[0];
                     face.push_back(edgeVerticesPerAtom[atom].at(vertices + 0)); // Vertice 1
                     face.push_back(edgeVerticesPerAtom[atom].at(vertices + 1)); // Vertice 2
                     face.push_back(firstNearestVertex);
