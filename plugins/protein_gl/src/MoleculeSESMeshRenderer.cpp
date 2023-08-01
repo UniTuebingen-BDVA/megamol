@@ -10,7 +10,6 @@
 
 #include "MoleculeSESMeshRenderer.h"
 #include "glm/gtx/string_cast.hpp"
-#include "mmcore/CoreInstance.h"
 #include "mmcore/param/BoolParam.h"
 #include "mmcore/param/ColorParam.h"
 #include "mmcore/param/EnumParam.h"
@@ -71,7 +70,8 @@ MoleculeSESMeshRenderer::MoleculeSESMeshRenderer()
         , sphereVertexBuffer_(nullptr)
         , pointLightBuffer_(nullptr)
         , directionalLightBuffer_(nullptr)
-        , atomCount_(0) {
+        , atomCount_(0)
+        , curMDChash(-1) {
     this->molDataCallerSlot.SetCompatibleCall<MolecularDataCallDescription>();
     this->molDataCallerSlot.SetNecessity(core::AbstractCallSlotPresentation::Necessity::SLOT_REQUIRED);
     this->MakeSlotAvailable(&this->molDataCallerSlot);
@@ -182,12 +182,15 @@ bool MoleculeSESMeshRenderer::create(void) {
     glEnable(GL_VERTEX_PROGRAM_POINT_SIZE_ARB);
     glEnable(GL_VERTEX_PROGRAM_TWO_SIDE);
 
+    /* WIP
     CoreInstance* ci = this->GetCoreInstance();
     if (!ci)
         return false;
+    */
 
     try {
-        auto const shdr_options = msf::ShaderFactoryOptionsOpenGL(ci->GetShaderPaths());
+        auto const shdr_options = core::utility::make_path_shader_options(
+            frontend_resources.get<megamol::frontend_resources::RuntimeConfig>());
 
         sphereShader_ = core::utility::make_shared_glowl_shader("sphere", shdr_options,
             std::filesystem::path("protein_gl/moleculeses/mses_sphere.vert.glsl"),
@@ -233,7 +236,8 @@ bool MoleculeSESMeshRenderer::create(void) {
         glDisableVertexAttribArray(i);
     }
 
-    deferredProvider_.setup(this->GetCoreInstance());
+       // setup all the deferred stuff
+    deferredProvider_.setup(frontend_resources.get<megamol::frontend_resources::RuntimeConfig>());
 
     return true;
 }
@@ -522,6 +526,13 @@ void MoleculeSESMeshRenderer::deinitialise() {}
  * MoleculeSESMeshRenderer::getDataCallback
  */
 bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
+
+    // controls
+    isFlatShading = false;
+    isStitching = true;
+    isDebug = true;
+
+
     auto* ctmd = dynamic_cast<CallTriMeshDataGL*>(&caller);
     if (ctmd == nullptr)
         return false;
@@ -532,6 +543,13 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
     if (!(*mol)(1))
         return false;
 
+    int atomCnt = mol->AtomCount();
+    if(isDebug) {
+        atomCnt = 3;
+    }
+
+
+
     ctmd->SetFrameCount(1);
     ctmd->AccessBoundingBoxes() = mol->AccessBoundingBoxes();
 
@@ -540,214 +558,229 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
         this->triaMesh.push_back(new CallTriMeshDataGL::Mesh());
     }
 
-    // fill the triangle mesh with data
-    if (this->reducedSurface.empty())
-        return false;
-    int subdivision_level = 2;
-    auto ico = new Icosphere(1, subdivision_level, true);
-    std::vector<std::vector<unsigned int>>multipleVertexPerIco = getMultipleVertices(ico);
-    int vertex_counter = (int)(ico->getVertexCount() * mol->AtomCount());
-    std::vector<float> vertex;
-    std::vector<float> normal;
-    std::vector<float> color;
-    std::vector<bool> muss_raus;
-    //std::vector<unsigned int> facesTempStore;
-
-    std::vector<std::vector<unsigned int>> edgeVerticesPerAtom; //Hier befinden sich alle Vertices die Teile einer Kante eines Atoms sind
-
-
-    for (auto i = 0; i < mol->AtomCount(); i++) {
-        for (int j = 0; j < ico->getVertexCount(); j++) {
-            vertex.push_back(ico->getVertices()[3 * j + 0] * mol->AtomTypes()[mol->AtomTypeIndices()[i]].Radius() + mol->AtomPositions()[3 * i + 0]);  // x
-            vertex.push_back(ico->getVertices()[3 * j + 1] * mol->AtomTypes()[mol->AtomTypeIndices()[i]].Radius() + mol->AtomPositions()[3 * i + 1]);  // y
-            vertex.push_back(ico->getVertices()[3 * j + 2] * mol->AtomTypes()[mol->AtomTypeIndices()[i]].Radius() + mol->AtomPositions()[3 * i + 2]);  // z
-
-            //normal[ico->getVertexCount() * 3 * i + 3 * j + 0] = ico->getNormals()[3 * j + 0];
-            normal.push_back(ico->getNormals()[3 * j + 0]);
-            normal.push_back(ico->getNormals()[3 * j + 1]);
-            normal.push_back(ico->getNormals()[3 * j + 2]);
-
-            color.push_back(0.6f);
-            color.push_back(0.6f);
-            color.push_back(0.6f);
-
-            muss_raus.push_back(false);
-        }
+    // reset vectors if data has changed (PDB data)
+    if (curMDChash != static_cast<int>(mol->DataHash())) {
+       curMDChash = static_cast<int>(mol->DataHash());
+       vertex.resize(0);
+       normal.resize(0);
+       color.resize(0);
+       face.resize(0);
     }
-    for (auto i = 0; i < mol->AtomCount(); i++) {
-        unsigned int lower_bound = vertex_counter / mol->AtomCount() * i;
-        unsigned int upper_bound = vertex_counter / mol->AtomCount() * (i + 1);
-        float atom_x = mol->AtomPositions()[(3 * i) + 0];
-        float atom_y = mol->AtomPositions()[(3 * i) + 1];
-        float atom_z = mol->AtomPositions()[(3 * i) + 2];
-        for (int j = 0; j < vertex_counter; ++j) {
-            if (j >= lower_bound && j < upper_bound) {
-                continue;
-            }
 
-            if (std::sqrt((atom_x - vertex[(j * 3) + 0]) * (atom_x - vertex[(j * 3) + 0]) +
-                          (atom_y - vertex[(j * 3) + 1]) * (atom_y - vertex[(j * 3) + 1]) +
-                          (atom_z - vertex[(j * 3) + 2]) * (atom_z - vertex[(j * 3) + 2])) <
-                mol->AtomTypes()[mol->AtomTypeIndices()[i]].Radius()) {
-                //color.at(j*3) = 1.0f;
-                muss_raus.at(j) = true;
+    if (this->vertex.size() == 0) {
+        // fill the triangle mesh with data
+        if (this->reducedSurface.empty())
+            return false;
+        int subdivision_level = 2;
+        auto ico = new Icosphere(1, subdivision_level, !isFlatShading);
+        std::vector<std::vector<unsigned int>> multipleVertexPerIco = getMultipleVertices(ico);
+        int vertex_counter = (int)(ico->getVertexCount() * atomCnt);
+        std::vector<bool> muss_raus;
+        //std::vector<unsigned int> facesTempStore;
+
+        std::vector<std::vector<unsigned int>>
+            edgeVerticesPerAtom; //Hier befinden sich alle Vertices die Teile einer Kante eines Atoms sind
+
+
+        for (auto i = 0; i < atomCnt; i++) {
+            for (int j = 0; j < ico->getVertexCount(); j++) {
+                vertex.push_back(ico->getVertices()[3 * j + 0] * mol->AtomTypes()[mol->AtomTypeIndices()[i]].Radius() +
+                                 mol->AtomPositions()[3 * i + 0]); // x
+                vertex.push_back(ico->getVertices()[3 * j + 1] * mol->AtomTypes()[mol->AtomTypeIndices()[i]].Radius() +
+                                 mol->AtomPositions()[3 * i + 1]); // y
+                vertex.push_back(ico->getVertices()[3 * j + 2] * mol->AtomTypes()[mol->AtomTypeIndices()[i]].Radius() +
+                                 mol->AtomPositions()[3 * i + 2]); // z
+
+                //normal[ico->getVertexCount() * 3 * i + 3 * j + 0] = ico->getNormals()[3 * j + 0];
+                normal.push_back(ico->getNormals()[3 * j + 0]);
+                normal.push_back(ico->getNormals()[3 * j + 1]);
+                normal.push_back(ico->getNormals()[3 * j + 2]);
+
+                color.push_back(0.6f);
+                color.push_back(0.6f);
+                color.push_back(0.6f);
+
+                muss_raus.push_back(false);
             }
         }
-    }
-    std::tuple<unsigned int, int> bla;
-    bla = {1, 2};
-    int xx = std::get<1>(bla);
+        for (auto i = 0; i < atomCnt; i++) {
+            unsigned int lower_bound = vertex_counter / atomCnt * i;
+            unsigned int upper_bound = vertex_counter / atomCnt * (i + 1);
+            float atom_x = mol->AtomPositions()[(3 * i) + 0];
+            float atom_y = mol->AtomPositions()[(3 * i) + 1];
+            float atom_z = mol->AtomPositions()[(3 * i) + 2];
+            for (int j = 0; j < vertex_counter; ++j) {
+                if (j >= lower_bound && j < upper_bound) {
+                    continue;
+                }
+
+                if (std::sqrt((atom_x - vertex[(j * 3) + 0]) * (atom_x - vertex[(j * 3) + 0]) +
+                              (atom_y - vertex[(j * 3) + 1]) * (atom_y - vertex[(j * 3) + 1]) +
+                              (atom_z - vertex[(j * 3) + 2]) * (atom_z - vertex[(j * 3) + 2])) <
+                    mol->AtomTypes()[mol->AtomTypeIndices()[i]].Radius()) {
+                    //color.at(j*3) = 1.0f;
+                    muss_raus.at(j) = true;
+                }
+            }
+        }
+        std::tuple<unsigned int, int> bla;
+        bla = {1, 2};
+        int xx = std::get<1>(bla);
 
     //TEST KUGEL ZUM DEBUGGEN in grün
     std::vector<int> zusatz = {79, 80, 337, 248, 86, 87, 89, 93, 95, 32, 97, 17, 110, 111, 116, 120}; //84 == 80 247 oder 333
 
-    for (int i :zusatz) {
+        for (int i : zusatz) {
 
 
-        for (int j = 0; j < ico->getVertexCount(); j++) {
-            vertex.push_back(ico->getVertices()[3 * j + 0] * 0.01 + vertex.at(i * 3 + 0)); // x
-            vertex.push_back(ico->getVertices()[3 * j + 1] * 0.01 + vertex.at(i * 3 + 1));
-            vertex.push_back(ico->getVertices()[3 * j + 2] * 0.01 + vertex.at(i * 3 + 2));
+            for (int j = 0; j < ico->getVertexCount(); j++) {
+                vertex.push_back(ico->getVertices()[3 * j + 0] * 0.01 + vertex.at(i * 3 + 0)); // x
+                vertex.push_back(ico->getVertices()[3 * j + 1] * 0.01 + vertex.at(i * 3 + 1));
+                vertex.push_back(ico->getVertices()[3 * j + 2] * 0.01 + vertex.at(i * 3 + 2));
 
-            //normal[ico->getVertexCount() * 3 * i + 3 * j + 0] = ico->getNormals()[3 * j + 0];
-            normal.push_back(ico->getNormals()[3 * j + 0]);
-            normal.push_back(ico->getNormals()[3 * j + 1]);
-            normal.push_back(ico->getNormals()[3 * j + 2]);
+                //normal[ico->getVertexCount() * 3 * i + 3 * j + 0] = ico->getNormals()[3 * j + 0];
+                normal.push_back(ico->getNormals()[3 * j + 0]);
+                normal.push_back(ico->getNormals()[3 * j + 1]);
+                normal.push_back(ico->getNormals()[3 * j + 2]);
 
-            if (i==80){
-                color.push_back(1);
-                color.push_back(0);
-                color.push_back(0);
-            }
-            else if (i==337){
-                color.push_back(0);
-                color.push_back(0);
-                color.push_back(1);
-            }
-            else if (i==17){
-                color.push_back(0);
-                color.push_back(1);
-                color.push_back(1);
-            }
-            else {
-                color.push_back(0);
-                color.push_back(1);
-                color.push_back(0);
+                if (i == 80) {
+                    color.push_back(1);
+                    color.push_back(0);
+                    color.push_back(0);
+                } else if (i == 337) {
+                    color.push_back(0);
+                    color.push_back(0);
+                    color.push_back(1);
+                } else if (i == 17) {
+                    color.push_back(0);
+                    color.push_back(1);
+                    color.push_back(1);
+                } else {
+                    color.push_back(0);
+                    color.push_back(1);
+                    color.push_back(0);
+                }
             }
         }
-    }
 
-    int face_counter = (int)(ico->getIndexCount() * mol->AtomCount());
-    std::vector<unsigned int> face;
-    std::vector<std::vector<std::tuple<unsigned int, int>>> referenceToOtherVertice(ico->getVertexCount() * mol->AtomCount());
-    /* referenceToOtherVertice: vector of all vertices with a "tuple" in it.
-     * 1. field is the index of the connected vertex
-     * 2. field is the number of faces of the edge
-     */
-    std::vector<bool> besucht;
-    std::vector<unsigned int> zuAtom;
-    std::vector<std::vector<unsigned int>> edgesInfo;
-    /* edgesInfo:
-     * erstes element, referenz zu erstem vertice
-     * zwrites element, referenz zu zweitem vertice
-     * drittes element, Anzahl faces der Kante
-     */
+        int face_counter = (int)(ico->getIndexCount() * atomCnt);
+        std::vector<std::vector<std::tuple<unsigned int, int>>> referenceToOtherVertice(
+            ico->getVertexCount() * atomCnt);
+        /* referenceToOtherVertice: vector of all vertices with a "tuple" in it.
+         * 1. field is the index of the connected vertex
+         * 2. field is the number of faces of the edge
+         */
+        std::vector<bool> besucht;
+        std::vector<unsigned int> zuAtom;
+        std::vector<std::vector<unsigned int>> edgesInfo;
+        /* edgesInfo:
+         * erstes element, referenz zu erstem vertice
+         * zwrites element, referenz zu zweitem vertice
+         * drittes element, Anzahl faces der Kante
+         */
 
-    // Gehe jedes Atom durch           | zusatz ist debug
-    for (auto i = 0; i < mol->AtomCount()+zusatz.size(); i++) {
-        std::vector<unsigned int> atomEdgeVerticeVector;
+        // Gehe jedes Atom durch           | zusatz ist debug
+        for (auto i = 0; i < atomCnt + zusatz.size(); i++) {
+            std::vector<unsigned int> atomEdgeVerticeVector;
 
-        int redCounter = 0;
-        // Gehe in jedem atom alle Ecken durch
-        for (int j = 0; j < ico->getIndexCount(); j += 3) {
-            if (i > 1) { //DEBUG CODE FÜR ZUSATZ KUGEL
-                face.push_back(ico->getVertexCount() * i + ico->getIndices()[j + 0]); //Vertice 1 von face
-                face.push_back(ico->getVertexCount() * i + ico->getIndices()[j + 1]); //Vertice 2 von face
-                face.push_back(ico->getVertexCount() * i + ico->getIndices()[j + 2]); //Vertice 3 von face
-            }
+            int redCounter = 0;
+            // Gehe in jedem atom alle Ecken durch
+            for (int j = 0; j < ico->getIndexCount(); j += 3) {
 
-            // checks for each Vertex of a face, weather it is in an atom or not
-            //Alle Vertices sind außerhalb anderen Kugeln, also werden sie gezeichnet!
-            else if (!(muss_raus.at(ico->getVertexCount() * i + ico->getIndices()[j + 0]) ||
-                         muss_raus.at(ico->getVertexCount() * i + ico->getIndices()[j + 1]) ||
-                         muss_raus.at(ico->getVertexCount() * i + ico->getIndices()[j + 2]))) {
-                face.push_back(ico->getVertexCount() * i + ico->getIndices()[j + 0]); //Vertice 1 von face
-                face.push_back(ico->getVertexCount() * i + ico->getIndices()[j + 1]); //Vertice 2 von face
-                face.push_back(ico->getVertexCount() * i + ico->getIndices()[j + 2]); //Vertice 3 von face
-            } // Nicht alle Vertices sind außerhalb. Schaue, dass nur Vertices die 2/3 drin sind ausgewählt werden.
-            // Wenn alle vertices drin liegen: ignore
-            // Wenn 2 Vertices drin liegen:Ignore, da
-            else {
-                //                              |Richtige Vertices pro Atom| Finde Richtige Vertices aus liste
-                bool staysIn0 = !muss_raus.at(ico->getVertexCount() * i + ico->getIndices()[j + 0]);
-                bool staysIn1 = !muss_raus.at(ico->getVertexCount() * i + ico->getIndices()[j + 1]);
-                bool staysIn2 = !muss_raus.at(ico->getVertexCount() * i + ico->getIndices()[j + 2]);
-
-                //2 out of 3
-                // Sind IMMER miteinander verbunden UND folgen aufeinander, d.h. ich kann nix weglassen
-                if (staysIn0 ? (staysIn1 || staysIn2) : (staysIn1 && staysIn2)) {
-                    if (staysIn0) {
-                        zuAtom.push_back(ico->getVertexCount() * i + ico->getIndices()[j + 0]);
-                        //color.at((ico->getVertexCount() * i + ico->getIndices()[j + 0])*3) = 1;
-
-                        atomEdgeVerticeVector.push_back(ico->getVertexCount() * i + ico->getIndices()[j + 0]);
-                        if (staysIn1) {
-                            referenceToOtherVertice.at(ico->getVertexCount() * i + ico->getIndices()[j + 0]);
-
-                            referenceToOtherVertice.at(ico->getVertexCount() * i + ico->getIndices()[j + 0]).emplace_back(ico->getVertexCount() * i + ico->getIndices()[j + 1], 1);
-                        }
-                        if (staysIn2) {
-                            referenceToOtherVertice.at(ico->getVertexCount() * i + ico->getIndices()[j + 0]).emplace_back(ico->getVertexCount() * i + ico->getIndices()[j + 2], 1);
-                        }
-                    }
-                    if (staysIn1) {
-                        zuAtom.push_back(ico->getVertexCount() * i + ico->getIndices()[j + 1]);
-                        //color.at((ico->getVertexCount() * i + ico->getIndices()[j + 1])*3) = 1;
-
-                        atomEdgeVerticeVector.push_back(ico->getVertexCount() * i + ico->getIndices()[j + 1]);
-                        if (staysIn0) {
-                            referenceToOtherVertice.at(ico->getVertexCount() * i + ico->getIndices()[j + 1]).emplace_back(ico->getVertexCount() * i + ico->getIndices()[j + 0],1);
-                        }
-                        if (staysIn2) {
-                            referenceToOtherVertice.at(ico->getVertexCount() * i + ico->getIndices()[j + 1]).emplace_back(ico->getVertexCount() * i + ico->getIndices()[j + 2],1);
-                        }
-                    }
-                    if (staysIn2) {
-                        zuAtom.push_back(ico->getVertexCount() * i + ico->getIndices()[j + 2]);
-                        //color.at((ico->getVertexCount() * i + ico->getIndices()[j + 2])*3) = 1;
-
-                        atomEdgeVerticeVector.push_back(ico->getVertexCount() * i + ico->getIndices()[j + 2]);
-                        if (staysIn0) {
-                            referenceToOtherVertice.at(ico->getVertexCount() * i + ico->getIndices()[j + 2]).emplace_back(ico->getVertexCount() * i + ico->getIndices()[j + 0],1);
-                        }
-                        if (staysIn1) {
-                            referenceToOtherVertice.at(ico->getVertexCount() * i + ico->getIndices()[j + 2]).emplace_back(ico->getVertexCount() * i + ico->getIndices()[j + 1],1);
-                        }
-                    }
+                // for DEBUG: set atomCnt to number of atoms that are going to be cut (e.g., reduce to 1 or 2)
+                if (i >= atomCnt) {                                               //DEBUG CODE FÜR ZUSATZ KUGEL
+                    face.push_back(ico->getVertexCount() * i + ico->getIndices()[j + 0]); //Vertice 1 von face
+                    face.push_back(ico->getVertexCount() * i + ico->getIndices()[j + 1]); //Vertice 2 von face
+                    face.push_back(ico->getVertexCount() * i + ico->getIndices()[j + 2]); //Vertice 3 von face
                 }
 
-                //TODO: Hier wohl die erweiterte Datenstruktur rein bringen.
-                // Was kann ich hier rein bringen
-                // Nehme 3 Listen : Done
-                //  Fülle die Listen mit Daten
-                /*
-                 *  +------------------+
-                    |     Vertice      |
-                    +------------------+
-                    | - besucht: bool  |
-                    | - index: int[4]  |
-                    | - index_atom: int|
-                    +------------------+
+                // checks for each Vertex of a face, weather it is in an atom or not
+                //Alle Vertices sind außerhalb anderen Kugeln, also werden sie gezeichnet!
+                else if (!(muss_raus.at(ico->getVertexCount() * i + ico->getIndices()[j + 0]) ||
+                             muss_raus.at(ico->getVertexCount() * i + ico->getIndices()[j + 1]) ||
+                             muss_raus.at(ico->getVertexCount() * i + ico->getIndices()[j + 2]))) {
+                    face.push_back(ico->getVertexCount() * i + ico->getIndices()[j + 0]); //Vertice 1 von face
+                    face.push_back(ico->getVertexCount() * i + ico->getIndices()[j + 1]); //Vertice 2 von face
+                    face.push_back(ico->getVertexCount() * i + ico->getIndices()[j + 2]); //Vertice 3 von face
+                } // Nicht alle Vertices sind außerhalb. Schaue, dass nur Vertices die 2/3 drin sind ausgewählt werden.
+                // Wenn alle vertices drin liegen: ignore
+                // Wenn 2 Vertices drin liegen:Ignore, da
+                else {
+                    //                              |Richtige Vertices pro Atom| Finde Richtige Vertices aus liste
+                    bool staysIn0 = !muss_raus.at(ico->getVertexCount() * i + ico->getIndices()[j + 0]);
+                    bool staysIn1 = !muss_raus.at(ico->getVertexCount() * i + ico->getIndices()[j + 1]);
+                    bool staysIn2 = !muss_raus.at(ico->getVertexCount() * i + ico->getIndices()[j + 2]);
 
-                 */
+                    //2 out of 3
+                    // Sind IMMER miteinander verbunden UND folgen aufeinander, d.h. ich kann nix weglassen
+                    if (staysIn0 ? (staysIn1 || staysIn2) : (staysIn1 && staysIn2)) {
+                        if (staysIn0) {
+                            zuAtom.push_back(ico->getVertexCount() * i + ico->getIndices()[j + 0]);
+                            //color.at((ico->getVertexCount() * i + ico->getIndices()[j + 0])*3) = 1;
 
+                            atomEdgeVerticeVector.push_back(ico->getVertexCount() * i + ico->getIndices()[j + 0]);
+                            if (staysIn1) {
+                                referenceToOtherVertice.at(ico->getVertexCount() * i + ico->getIndices()[j + 0]);
+
+                                referenceToOtherVertice.at(ico->getVertexCount() * i + ico->getIndices()[j + 0])
+                                    .emplace_back(ico->getVertexCount() * i + ico->getIndices()[j + 1], 1);
+                            }
+                            if (staysIn2) {
+                                referenceToOtherVertice.at(ico->getVertexCount() * i + ico->getIndices()[j + 0])
+                                    .emplace_back(ico->getVertexCount() * i + ico->getIndices()[j + 2], 1);
+                            }
+                        }
+                        if (staysIn1) {
+                            zuAtom.push_back(ico->getVertexCount() * i + ico->getIndices()[j + 1]);
+                            //color.at((ico->getVertexCount() * i + ico->getIndices()[j + 1])*3) = 1;
+
+                            atomEdgeVerticeVector.push_back(ico->getVertexCount() * i + ico->getIndices()[j + 1]);
+                            if (staysIn0) {
+                                referenceToOtherVertice.at(ico->getVertexCount() * i + ico->getIndices()[j + 1])
+                                    .emplace_back(ico->getVertexCount() * i + ico->getIndices()[j + 0], 1);
+                            }
+                            if (staysIn2) {
+                                referenceToOtherVertice.at(ico->getVertexCount() * i + ico->getIndices()[j + 1])
+                                    .emplace_back(ico->getVertexCount() * i + ico->getIndices()[j + 2], 1);
+                            }
+                        }
+                        if (staysIn2) {
+                            zuAtom.push_back(ico->getVertexCount() * i + ico->getIndices()[j + 2]);
+                            //color.at((ico->getVertexCount() * i + ico->getIndices()[j + 2])*3) = 1;
+
+                            atomEdgeVerticeVector.push_back(ico->getVertexCount() * i + ico->getIndices()[j + 2]);
+                            if (staysIn0) {
+                                referenceToOtherVertice.at(ico->getVertexCount() * i + ico->getIndices()[j + 2])
+                                    .emplace_back(ico->getVertexCount() * i + ico->getIndices()[j + 0], 1);
+                            }
+                            if (staysIn1) {
+                                referenceToOtherVertice.at(ico->getVertexCount() * i + ico->getIndices()[j + 2])
+                                    .emplace_back(ico->getVertexCount() * i + ico->getIndices()[j + 1], 1);
+                            }
+                        }
+                    }
+
+                    //TODO: Hier wohl die erweiterte Datenstruktur rein bringen.
+                    // Was kann ich hier rein bringen
+                    // Nehme 3 Listen : Done
+                    //  Fülle die Listen mit Daten
+                    /*
+                     *  +------------------+
+                        |     Vertice      |
+                        +------------------+
+                        | - besucht: bool  |
+                        | - index: int[4]  |
+                        | - index_atom: int|
+                        +------------------+
+
+                     */
+                }
             }
+            edgeVerticesPerAtom.push_back(atomEdgeVerticeVector);
         }
-        edgeVerticesPerAtom.push_back(atomEdgeVerticeVector);
-    }
 
-    // Hier habe ich jetzt alle Vertices der Atome.
-    // Gehe diese durch und finde nächsten Vertice auf anderen Atomen, nach Verticeliste
+        // Hier habe ich jetzt alle Vertices der Atome.
+        // Gehe diese durch und finde nächsten Vertice auf anderen Atomen, nach Verticeliste
 
     /* TODO:
      *  Hier muss der neue Algorithmus rein.
@@ -787,21 +820,27 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
             std::vector<unsigned int> finde_341 = findNearestVertice(edgeVerticesPerAtom, edgeVerticesPerAtom[1].at(9),
                 vertex, 1);
 
-            bool found = false;
-            int index = INT_MIN;
+                bool found = false;
+                int index = INT_MIN;
 
-            for (std::tuple<unsigned int, int> i : referenceToOtherVertice.at(79)) {
-                if (std::get<0>(i) == 337){
-
+                for (std::tuple<unsigned int, int> i : referenceToOtherVertice.at(79)) {
+                    if (std::get<0>(i) == 337) {}
                 }
+
+                // Marco: this part was disabled and not able to compile in last commit of Julian Wolf (may still has mistakes!)
+                // sets the additional triangles for sewing the Ico spheres together
+                if (isStitching) {
+                    int firstNearestVertex =
+                        findNearestVertice(edgeVerticesPerAtom, edgeVerticesPerAtom[atom].at(vertices + 0),
+                            edgeVerticesPerAtom[atom].at(vertices + 1), vertex, atom)[0];
+                    face.push_back(edgeVerticesPerAtom[atom].at(vertices + 0)); // Vertice 1
+                    face.push_back(edgeVerticesPerAtom[atom].at(vertices + 1)); // Vertice 2
+                    face.push_back(firstNearestVertex);
+                }
+
             }
-
-
-            //face.push_back(edgeVerticesPerAtom[atom].at(vertices + 0)); // Vertice 1
-            //face.push_back(edgeVerticesPerAtom[atom].at(vertices + 1)); // Vertice 2
-            //face.push_back(findNearestVertice(edgeVerticesPerAtom, edgeVerticesPerAtom[atom].at(vertices + 0),
-            //    edgeVerticesPerAtom[atom].at(vertices + 1), vertex, atom));
         }
+        delete ico;
     }
 
 
@@ -828,7 +867,7 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
     this->triaMesh[0]->SetTriangleData(face.size() / 3, face2, true);
     this->triaMesh[0]->SetMaterial(nullptr);
 
-    delete ico;
+
 
     // set triangle mesh to caller
     if (this->triaMesh[0]->GetVertexCount() > 0) {
