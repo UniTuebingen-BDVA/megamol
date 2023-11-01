@@ -584,6 +584,7 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
 
         for (auto i = 0; i < atomCnt; i++) {
             for (int j = 0; j < ico->getVertexCount(); j++) {
+                //Vertex-Koordinaten 
                 vertex.push_back(ico->getVertices()[3 * j + 0] * mol->AtomTypes()[mol->AtomTypeIndices()[i]].Radius() +
                                  mol->AtomPositions()[3 * i + 0]); // x
                 vertex.push_back(ico->getVertices()[3 * j + 1] * mol->AtomTypes()[mol->AtomTypeIndices()[i]].Radius() +
@@ -604,8 +605,10 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
             }
         }
         for (auto i = 0; i < atomCnt; i++) {
+            //Grenzen für Interatkion
             unsigned int lower_bound = vertex_counter / atomCnt * i;
             unsigned int upper_bound = vertex_counter / atomCnt * (i + 1);
+            //Koord. aktuelles Atom
             float atom_x = mol->AtomPositions()[(3 * i) + 0];
             float atom_y = mol->AtomPositions()[(3 * i) + 1];
             float atom_z = mol->AtomPositions()[(3 * i) + 2];
@@ -613,7 +616,7 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                 if (j >= lower_bound && j < upper_bound) {
                     continue;
                 }
-
+                //prüfe Kollision
                 if (std::sqrt((atom_x - vertex[(j * 3) + 0]) * (atom_x - vertex[(j * 3) + 0]) +
                               (atom_y - vertex[(j * 3) + 1]) * (atom_y - vertex[(j * 3) + 1]) +
                               (atom_z - vertex[(j * 3) + 2]) * (atom_z - vertex[(j * 3) + 2])) <
@@ -820,7 +823,7 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
 
                 // Marco: this part was disabled and not able to compile in last commit of Julian Wolf (may still has mistakes!)
                 // sets the additional triangles for sewing the Ico spheres together
-                if (isStitching) {
+                if (isStitching) {                    
                     int firstNearestVertex =
                         findNearestVertice(edgeVerticesPerAtom, edgeVerticesPerAtom[atom].at(vertices + 0),
                             edgeVerticesPerAtom[atom].at(vertices + 1), vertex, atom)[0];
