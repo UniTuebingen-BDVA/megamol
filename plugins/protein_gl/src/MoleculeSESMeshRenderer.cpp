@@ -545,7 +545,7 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
 
     int atomCnt = mol->AtomCount();
     if(isDebug) {
-        atomCnt = 3;
+        atomCnt = 6;
     }
 
 
@@ -585,17 +585,17 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
         for (auto i = 0; i < atomCnt; i++) {
             for (int j = 0; j < ico->getVertexCount(); j++) {
                 //Vertex-Koordinaten 
-                vertex.push_back(ico->getVertices()[3 * j + 0] * mol->AtomTypes()[mol->AtomTypeIndices()[i]].Radius() +
+                vertex.push_back(ico->getVertices()[j][0] * mol->AtomTypes()[mol->AtomTypeIndices()[i]].Radius() +
                                  mol->AtomPositions()[3 * i + 0]); // x
-                vertex.push_back(ico->getVertices()[3 * j + 1] * mol->AtomTypes()[mol->AtomTypeIndices()[i]].Radius() +
+                vertex.push_back(ico->getVertices()[j][1] * mol->AtomTypes()[mol->AtomTypeIndices()[i]].Radius() +
                                  mol->AtomPositions()[3 * i + 1]); // y
-                vertex.push_back(ico->getVertices()[3 * j + 2] * mol->AtomTypes()[mol->AtomTypeIndices()[i]].Radius() +
+                vertex.push_back(ico->getVertices()[j][2] * mol->AtomTypes()[mol->AtomTypeIndices()[i]].Radius() +
                                  mol->AtomPositions()[3 * i + 2]); // z
 
                 //normal[ico->getVertexCount() * 3 * i + 3 * j + 0] = ico->getNormals()[3 * j + 0];
-                normal.push_back(ico->getNormals()[3 * j + 0]);
-                normal.push_back(ico->getNormals()[3 * j + 1]);
-                normal.push_back(ico->getNormals()[3 * j + 2]);
+                normal.push_back(ico->getNormals()[j][0]);
+                normal.push_back(ico->getNormals()[j][1]);
+                normal.push_back(ico->getNormals()[j][2]);
 
                 color.push_back(0.6f);
                 color.push_back(0.6f);
@@ -637,14 +637,14 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
 
 
             for (int j = 0; j < ico->getVertexCount(); j++) {
-                vertex.push_back(ico->getVertices()[3 * j + 0] * 0.01 + vertex.at(i * 3 + 0)); // x
-                vertex.push_back(ico->getVertices()[3 * j + 1] * 0.01 + vertex.at(i * 3 + 1));
-                vertex.push_back(ico->getVertices()[3 * j + 2] * 0.01 + vertex.at(i * 3 + 2));
+                vertex.push_back(ico->getVertices()[j][0] * 0.01 + vertex.at(i * 3 + 0)); // x
+                vertex.push_back(ico->getVertices()[j][1] * 0.01 + vertex.at(i * 3 + 1));
+                vertex.push_back(ico->getVertices()[j][2] * 0.01 + vertex.at(i * 3 + 2));
 
                 //normal[ico->getVertexCount() * 3 * i + 3 * j + 0] = ico->getNormals()[3 * j + 0];
-                normal.push_back(ico->getNormals()[3 * j + 0]);
-                normal.push_back(ico->getNormals()[3 * j + 1]);
-                normal.push_back(ico->getNormals()[3 * j + 2]);
+                normal.push_back(ico->getNormals()[j][0]);
+                normal.push_back(ico->getNormals()[j][1]);
+                normal.push_back(ico->getNormals()[j][2]);
 
                 if (i == 80) {
                     color.push_back(1);

@@ -95,8 +95,7 @@ void Icosphere::printSelf() const
               << "Triangle Count: " << getTriangleCount() << "\n"
               << "   Index Count: " << getIndexCount() << "\n"
               << "  Vertex Count: " << getVertexCount() << "\n"
-              << "  Normal Count: " << getNormalCount() << "\n"
-              << "TexCoord Count: " << getTexCoordCount() << std::endl;
+              << "  Normal Count: " << getNormalCount() << "\n" << std::endl;
 }
 
 
@@ -172,7 +171,7 @@ void Icosphere::updateRadius()
 
     std::size_t i, j;
     std::size_t count = vertices.size();
-    for (i = 0, j = 0; i < count; i += 3, j += 8) {
+    for (i = 0, j = 0; i < count; i++, j += 6) {
         /*
         for (int k = 0; k < 3; k++)
         {
@@ -219,8 +218,10 @@ std::vector<glm::vec3> Icosphere::computeIcosahedronVertices()
         z = radius * sinf(V_ANGLE); // elevaton
         xy = radius * cosf(V_ANGLE);
 
+        /*
         std::tuple<float, float, float> xyz1(xy * cosf(hAngle1), xy * sinf(hAngle1), z);
         std::tuple<float, float, float> xyz2(xy * cosf(hAngle2), xy * sinf(hAngle2), -z);
+        */
 
         vertices[i] = glm::vec3(xy * cosf(hAngle1), xy * sinf(hAngle1), z);
         vertices[i2] = glm::vec3(xy * cosf(hAngle2), xy * sinf(hAngle2), -z);
@@ -256,7 +257,6 @@ void Icosphere::buildVerticesFlat()
     // clear memory of prev arrays
     std::vector<glm::vec3>().swap(vertices);
     std::vector<glm::vec3>().swap(normals);
-    std::vector<glm::vec2>().swap(texCoords);
     std::vector<unsigned int>().swap(indices);
     std::vector<unsigned int>().swap(lineIndices);
 
@@ -279,61 +279,27 @@ void Icosphere::buildVerticesFlat()
         //analogous to v2 for the next row
         v4 = tmpVertices[((i + 5) < 10) ? (i + 6) : 6];
 
-        /*
-        v1 = &tmpVertices[i * 3];
-        if(i < 5)
-            v2 = &tmpVertices[(i + 1) * 3];
-        else
-            v2 = &tmpVertices[3];
-
-        v3 = &tmpVertices[(i + 5) * 3];
-        if((i + 5) < 10)
-            v4 = &tmpVertices[(i + 6) * 3];
-        else
-            v4 = &tmpVertices[6 * 3];
-        */
-
-        // texture coords
-        t0 = glm::vec2((2 * i - 1) * S_STEP, 0);
-        t1 = glm::vec2((2 * i - 2) * S_STEP, T_STEP);
-        t2 = glm::vec2((2 * i - 0) * S_STEP, T_STEP);
-        t3 = glm::vec2((2 * i - 1) * S_STEP, T_STEP * 2);
-        t4 = glm::vec2((2 * i + 1) * S_STEP, T_STEP * 2);
-        t11 = glm::vec2(2 * i * S_STEP, T_STEP * 3);
-
-        /*
-        t0[0] = (2 * i - 1) * S_STEP;   t0[1] = 0;
-        t1[0] = (2 * i - 2) * S_STEP;   t1[1] = T_STEP;
-        t2[0] = (2 * i - 0) * S_STEP;   t2[1] = T_STEP;
-        t3[0] = (2 * i - 1) * S_STEP;   t3[1] = T_STEP * 2;
-        t4[0] = (2 * i + 1) * S_STEP;   t4[1] = T_STEP * 2;
-        t11[0]= 2 * i * S_STEP;         t11[1]= T_STEP * 3;
-        */
         // add a triangle in 1st row
         Icosphere::computeFaceNormal(v0, v1, v2, n);
         addVertices(v0, v1, v2);
         addNormals(n, n, n);
-        addTexCoords(t0, t1, t2);
         addIndices(index, index+1, index+2);
 
         // add 2 triangles in 2nd row
         Icosphere::computeFaceNormal(v1, v3, v2, n);
         addVertices(v1, v3, v2);
         addNormals(n, n, n);
-        addTexCoords(t1, t3, t2);
         addIndices(index+3, index+4, index+5);
 
         Icosphere::computeFaceNormal(v2, v3, v4, n);
         addVertices(v2, v3, v4);
         addNormals(n, n, n);
-        addTexCoords(t2, t3, t4);
         addIndices(index+6, index+7, index+8);
 
         // add a triangle in 3rd row
         Icosphere::computeFaceNormal(v3, v11, v4, n);
         addVertices(v3, v11, v4);
         addNormals(n, n, n);
-        addTexCoords(t3, t11, t4);
         addIndices(index+9, index+10, index+11);
 
         // add 6 edge lines per iteration
@@ -393,7 +359,6 @@ void Icosphere::buildVerticesSmooth() {
     // clear memory of prev arrays
     std::vector<glm::vec3>().swap(vertices);
     std::vector<glm::vec3>().swap(normals);
-    std::vector<glm::vec2>().swap(texCoords);
     std::vector<unsigned int>().swap(indices);
     std::vector<unsigned int>().swap(lineIndices);
     std::map<std::pair<float, float>, unsigned int>().swap(sharedIndices);
@@ -417,7 +382,6 @@ void Icosphere::buildVerticesSmooth() {
     // add 14 non-shared vertices first (index from 0 to 13)
     addVertex(tmpVertices[0][0], tmpVertices[0][1], tmpVertices[0][2]);
     addNormal(0, 0, 1);
-    addTexCoord(S_STEP, 0);
     /*
     addVertex(tmpVertices[0], tmpVertices[1], tmpVertices[2]);      // v0 (top)
     addNormal(0, 0, 1);
@@ -426,117 +390,96 @@ void Icosphere::buildVerticesSmooth() {
 
     addVertex(tmpVertices[0][0], tmpVertices[0][1], tmpVertices[0][2]); // v1
     addNormal(0, 0, 1);
-    addTexCoord(S_STEP * 3, 0);
 
     addVertex(tmpVertices[0][0], tmpVertices[0][1], tmpVertices[0][2]); // v2
     addNormal(0, 0, 1);
-    addTexCoord(S_STEP * 5, 0);
 
     addVertex(tmpVertices[0][0], tmpVertices[0][1], tmpVertices[0][2]); // v3
     addNormal(0, 0, 1);
-    addTexCoord(S_STEP * 7, 0);
 
     addVertex(tmpVertices[0][0], tmpVertices[0][1], tmpVertices[0][2]); // v4
     addNormal(0, 0, 1);
-    addTexCoord(S_STEP * 9, 0);
 
     addVertex(tmpVertices[11][0], tmpVertices[11][1], tmpVertices[11][2]); // v5 (bottom)
     addNormal(0, 0, -1);
-    addTexCoord(S_STEP * 2, T_STEP * 3);
 
     addVertex(tmpVertices[11][0], tmpVertices[11][1], tmpVertices[11][2]); // v6
     addNormal(0, 0, -1);
-    addTexCoord(S_STEP * 4, T_STEP * 3);
 
     addVertex(tmpVertices[11][0], tmpVertices[11][1], tmpVertices[11][2]);   // v7
     addNormal(0, 0, -1);
-    addTexCoord(S_STEP * 6, T_STEP * 3);
 
     addVertex(tmpVertices[11][0], tmpVertices[11][1], tmpVertices[11][2]);   // v8
     addNormal(0, 0, -1);
-    addTexCoord(S_STEP * 8, T_STEP * 3);
 
     addVertex(tmpVertices[11][0], tmpVertices[11][1], tmpVertices[11][2]);   // v9
     addNormal(0, 0, -1);
-    addTexCoord(S_STEP * 10, T_STEP * 3);
 
     v = tmpVertices[1];  // v10 (left)
     Icosphere::computeVertexNormal(v, n);
     addVertex(v[0], v[1], v[2]);
     addNormal(n[0], n[1], n[2]);
-    addTexCoord(0, T_STEP);
 
     addVertex(v[0], v[1], v[2]);                                            // v11 (right)
     addNormal(n[0], n[1], n[2]);
-    addTexCoord(S_STEP * 10, T_STEP);
 
     v = tmpVertices[6]; // v12 (left)
     Icosphere::computeVertexNormal(v, n);
     addVertex(v[0], v[1], v[2]);
     addNormal(n[0], n[1], n[2]);
-    addTexCoord(S_STEP, T_STEP * 2);
 
     addVertex(v[0], v[1], v[2]);                                            // v13 (right)
     addNormal(n[0], n[1], n[2]);
-    addTexCoord(S_STEP * 11, T_STEP * 2);
 
     // add 8 shared vertices to array (index from 14 to 21)
     v = tmpVertices[2]; // v14 (shared)
     Icosphere::computeVertexNormal(v, n);
     addVertex(v[0], v[1], v[2]);
     addNormal(n[0], n[1], n[2]);
-    addTexCoord(S_STEP * 2, T_STEP);
-    sharedIndices[std::make_pair(S_STEP * 2, T_STEP)] = texCoords.size() / 2 - 1;
+    //sharedIndices[std::make_pair(S_STEP * 2, T_STEP)] = texCoords.size() / 2 - 1;
 
     v = tmpVertices[3]; // v15 (shared)
     Icosphere::computeVertexNormal(v, n);
     addVertex(v[0], v[1], v[2]);
     addNormal(n[0], n[1], n[2]);
-    addTexCoord(S_STEP * 4, T_STEP);
-    sharedIndices[std::make_pair(S_STEP * 4, T_STEP)] = texCoords.size() / 2 - 1;
+    //sharedIndices[std::make_pair(S_STEP * 4, T_STEP)] = texCoords.size() / 2 - 1;
 
     v = tmpVertices[4]; // v16 (shared)
     scale = Icosphere::computeScaleForLength(v, 1);
     n[0] = v[0] * scale;    n[1] = v[1] * scale;    n[2] = v[2] * scale;
     addVertex(v[0], v[1], v[2]);
     addNormal(n[0], n[1], n[2]);
-    addTexCoord(S_STEP * 6, T_STEP);
-    sharedIndices[std::make_pair(S_STEP * 6, T_STEP)] = texCoords.size() / 2 - 1;
+    //sharedIndices[std::make_pair(S_STEP * 6, T_STEP)] = texCoords.size() / 2 - 1;
 
     v = tmpVertices[5]; // v17 (shared)
     Icosphere::computeVertexNormal(v, n);
     addVertex(v[0], v[1], v[2]);
     addNormal(n[0], n[1], n[2]);
-    addTexCoord(S_STEP * 8, T_STEP);
-    sharedIndices[std::make_pair(S_STEP * 8, T_STEP)] = texCoords.size() / 2 - 1;
+    //sharedIndices[std::make_pair(S_STEP * 8, T_STEP)] = texCoords.size() / 2 - 1;
 
     v = tmpVertices[7]; // v18 (shared)
     Icosphere::computeVertexNormal(v, n);
     addVertex(v[0], v[1], v[2]);
     addNormal(n[0], n[1], n[2]);
-    addTexCoord(S_STEP * 3, T_STEP * 2);
-    sharedIndices[std::make_pair(S_STEP * 3, T_STEP * 2)] = texCoords.size() / 2 - 1;
+    //sharedIndices[std::make_pair(S_STEP * 3, T_STEP * 2)] = texCoords.size() / 2 - 1;
 
     v = tmpVertices[8]; // v19 (shared)
     Icosphere::computeVertexNormal(v, n);
     addVertex(v[0], v[1], v[2]);
     addNormal(n[0], n[1], n[2]);
-    addTexCoord(S_STEP * 5, T_STEP * 2);
-    sharedIndices[std::make_pair(S_STEP * 5, T_STEP * 2)] = texCoords.size() / 2 - 1;
+    //sharedIndices[std::make_pair(S_STEP * 5, T_STEP * 2)] = texCoords.size() / 2 - 1;
 
     v = tmpVertices[9]; // v20 (shared)
     Icosphere::computeVertexNormal(v, n);
     addVertex(v[0], v[1], v[2]);
     addNormal(n[0], n[1], n[2]);
-    addTexCoord(S_STEP * 7, T_STEP * 2);
-    sharedIndices[std::make_pair(S_STEP * 7, T_STEP * 2)] = texCoords.size() / 2 - 1;
+    //sharedIndices[std::make_pair(S_STEP * 7, T_STEP * 2)] = texCoords.size() / 2 - 1;
 
     v = tmpVertices[10]; // v21 (shared)
     Icosphere::computeVertexNormal(v, n);
     addVertex(v[0], v[1], v[2]);
     addNormal(n[0], n[1], n[2]);
-    addTexCoord(S_STEP * 9, T_STEP * 2);
-    sharedIndices[std::make_pair(S_STEP * 9, T_STEP * 2)] = texCoords.size() / 2 - 1;
+    //sharedIndices[std::make_pair(S_STEP * 9, T_STEP * 2)] = texCoords.size() / 2 - 1;
 
     // build index list for icosahedron (20 triangles)
     addIndices( 0, 10, 14);      // 1st row (5 tris)
@@ -608,15 +551,11 @@ void Icosphere::buildVerticesSmooth() {
 void Icosphere::subdivideVerticesFlat()
 {
     std::vector<glm::vec3> tmpVertices;
-    std::vector<glm::vec2> tmpTexCoords;
     std::vector<unsigned int> tmpIndices;
     int indexCount;
     glm::vec3 *v1, *v2, *v3;          // ptr to original vertices of a triangle
     glm::vec3 tmpv1, tmpv2, tmpv3;
-    glm::vec2 *t1, *t2, *t3;          // ptr to original texcoords of a triangle
-    glm::vec2 tmpt1, tmpt2, tmpt3;
     glm::vec3 newV1, newV2, newV3; // new vertex positions
-    glm::vec2 newT1, newT2, newT3; // new texture coords
     glm::vec3 normal;                    // new face normal
     unsigned int index = 0;             // new index value
     int i, j;
@@ -626,13 +565,11 @@ void Icosphere::subdivideVerticesFlat()
     {
         // copy prev arrays
         tmpVertices = vertices;
-        tmpTexCoords = texCoords;
         tmpIndices = indices;
 
         // clear prev arrays
         vertices.clear();
         normals.clear();
-        texCoords.clear();
         indices.clear();
         lineIndices.clear();
 
@@ -644,45 +581,33 @@ void Icosphere::subdivideVerticesFlat()
             v1 = &tmpVertices[tmpIndices[j]];
             v2 = &tmpVertices[tmpIndices[j + 1]];
             v3 = &tmpVertices[tmpIndices[j + 2]];
-            t1 = &tmpTexCoords[tmpIndices[j]];
-            t2 = &tmpTexCoords[tmpIndices[j + 1]];
-            t3 = &tmpTexCoords[tmpIndices[j + 2]];
 
             tmpv1 = *v1;
             tmpv2 = *v2;
             tmpv3 = *v3;
-            tmpt1 = *t1;
-            tmpt2 = *t2;
-            tmpt3 = *t3;
+
             // get 3 new vertices by spliting half on each edge
             computeHalfVertex(tmpv1, tmpv2, radius, newV1);
             computeHalfVertex(tmpv2, tmpv3, radius, newV2);
             computeHalfVertex(tmpv1, tmpv3, radius, newV3);
-            computeHalfTexCoord(tmpt1, tmpt2, newT1);
-            computeHalfTexCoord(tmpt2, tmpt3, newT2);
-            computeHalfTexCoord(tmpt1, tmpt3, newT3);
 
             // add 4 new triangles
             addVertices(tmpv1, newV1, newV3);
-            addTexCoords(tmpt1, newT1, newT3);
             computeFaceNormal(tmpv1, newV1, newV3, normal);
             addNormals(normal, normal, normal);
             addIndices(index, index+1, index+2);
 
             addVertices(newV1, tmpv2, newV2);
-            addTexCoords(newT1, tmpt2, newT2);
             computeFaceNormal(newV1, tmpv2, newV2, normal);
             addNormals(normal, normal, normal);
             addIndices(index+3, index+4, index+5);
 
             addVertices(newV1, newV2, newV3);
-            addTexCoords(newT1, newT2, newT3);
             computeFaceNormal(newV1, newV2, newV3, normal);
             addNormals(normal, normal, normal);
             addIndices(index+6, index+7, index+8);
 
             addVertices(newV3, newV2, tmpv3);
-            addTexCoords(newT3, newT2, tmpt3);
             computeFaceNormal(newV3, newV2, tmpv3, normal);
             addNormals(normal, normal, normal);
             addIndices(index+9, index+10, index+11);
@@ -716,11 +641,8 @@ void Icosphere::subdivideVerticesSmooth()
     unsigned int i1, i2, i3;            // indices from original triangle
     glm::vec3 *v1, *v2, *v3; // ptr to original vertices of a triangle
     glm::vec3 tmpv1, tmpv2, tmpv3;
-    glm::vec2 *t1, *t2, *t3; // ptr to original texcoords of a triangle
-    glm::vec2 tmpt1, tmpt2, tmpt3;
     glm::vec3 newV1, newV2, newV3; // new subdivided vertex positions
     glm::vec3 newN1, newN2, newN3; // new subdivided normals
-    glm::vec2 newT1, newT2, newT3; // new subdivided texture coords
     unsigned int newI1, newI2, newI3;   // new subdivided indices
     int i, j;
 
@@ -746,33 +668,24 @@ void Icosphere::subdivideVerticesSmooth()
             v1 = &vertices[i1];
             v2 = &vertices[i2];
             v3 = &vertices[i3];
-            t1 = &texCoords[i1];
-            t2 = &texCoords[i2];
-            t3 = &texCoords[i3];
 
             tmpv1 = *v1;
             tmpv2 = *v2;
             tmpv3 = *v3;
-            tmpt1 = *t1;
-            tmpt2 = *t2;
-            tmpt3 = *t3;
 
             // get 3 new vertex attribs by spliting half on each edge
             computeHalfVertex(tmpv1, tmpv2, radius, newV1);
             computeHalfVertex(tmpv2, tmpv3, radius, newV2);
             computeHalfVertex(tmpv1, tmpv3, radius, newV3);
-            computeHalfTexCoord(tmpt1, tmpt2, newT1);
-            computeHalfTexCoord(tmpt2, tmpt3, newT2);
-            computeHalfTexCoord(tmpt1, tmpt3, newT3);
             computeVertexNormal(newV1, newN1);
             computeVertexNormal(newV2, newN2);
             computeVertexNormal(newV3, newN3);
 
             // add new vertices/normals/texcoords to arrays
             // It will check if it is shared/non-shared and return index
-            newI1 = addSubVertexAttribs(newV1, newN1, newT1);
-            newI2 = addSubVertexAttribs(newV2, newN2, newT2);
-            newI3 = addSubVertexAttribs(newV3, newN3, newT3);
+            newI1 = addSubVertexAttribs(newV1, newN1);
+            newI2 = addSubVertexAttribs(newV2, newN2);
+            newI3 = addSubVertexAttribs(newV3, newN3);
 
             // add 4 new triangle indices
             addIndices(i1, newI1, newI3);
@@ -798,7 +711,7 @@ void Icosphere::buildInterleavedVertices()
 
     std::size_t i, j;
     std::size_t count = vertices.size();
-    for(i = 0, j = 0; i < count; i += 3, j += 2)
+    for(i = 0; i < count; i += 3)
     {
         interleavedVertices.push_back(vertices[i][0]);
         interleavedVertices.push_back(vertices[i][1]);
@@ -808,8 +721,6 @@ void Icosphere::buildInterleavedVertices()
         interleavedVertices.push_back(normals[i][1]);
         interleavedVertices.push_back(normals[i][2]);
 
-        interleavedVertices.push_back(texCoords[j][0]);
-        interleavedVertices.push_back(texCoords[j][1]);
     }
 }
 
@@ -880,27 +791,6 @@ void Icosphere::addNormals(const glm::vec3 n1, const glm::vec3 n2, const glm::ve
 
 
 
-///////////////////////////////////////////////////////////////////////////////
-// add single texture coord to array
-///////////////////////////////////////////////////////////////////////////////
-void Icosphere::addTexCoord(float s, float t)
-{
-    glm::vec2 st = {s, t};
-    texCoords.push_back(st);
-}
-
-
-
-///////////////////////////////////////////////////////////////////////////////
-// add 3 texture coords of a triangle to array
-///////////////////////////////////////////////////////////////////////////////
-void Icosphere::addTexCoords(const glm::vec2 t1, const glm::vec2 t2, const glm::vec2 t3) {
-    texCoords.push_back(t1);
-    texCoords.push_back(t2);
-    texCoords.push_back(t3);
-}
-
-
 
 ///////////////////////////////////////////////////////////////////////////////
 // add 3 indices to array
@@ -952,39 +842,13 @@ void Icosphere::addSubLineIndices(unsigned int i1,
 // return its index value
 // If it is a shared vertex, remember its index, so it can be re-used
 ///////////////////////////////////////////////////////////////////////////////
-unsigned int Icosphere::addSubVertexAttribs(const glm::vec3 v, const glm::vec3 n, const glm::vec2 t) {
+unsigned int Icosphere::addSubVertexAttribs(const glm::vec3 v, const glm::vec3 n) {
     unsigned int index;     // return value;
 
-    // check if is shared vertex or not first
-    if(Icosphere::isSharedTexCoord(t))
-    {
-        // find if it does already exist in sharedIndices map using (s,t) key
-        // if not in the list, add the vertex attribs to arrays and return its index
-        // if exists, return the current index
-        std::pair<float, float> key = std::make_pair(t[0], t[1]);
-        std::map<std::pair<float, float>, unsigned int>::iterator iter = sharedIndices.find(key);
-        if(iter == sharedIndices.end())
-        {
-            addVertex(v[0], v[1], v[2]);
-            addNormal(n[0], n[1], n[2]);
-            addTexCoord(t[0], t[1]);
-            index = texCoords.size() / 2 - 1;
-            sharedIndices[key] = index;
-        }
-        else
-        {
-            index = iter->second;
-        }
-    }
-    // not shared
-    else
-    {
-        addVertex(v[0], v[1], v[2]);
-        addNormal(n[0], n[1], n[2]);
-        addTexCoord(t[0], t[1]);
-        index = texCoords.size() / 2 - 1;
-    }
-
+    addVertex(v[0], v[1], v[2]);
+    addNormal(n[0], n[1], n[2]);
+    index = vertices.size() - 1;
+  
     return index;
 }
 
@@ -996,7 +860,7 @@ unsigned int Icosphere::addSubVertexAttribs(const glm::vec3 v, const glm::vec3 n
 // return face normal (4th param) of a triangle v1-v2-v3
 // if a triangle has no surface (normal length = 0), then return a zero vector
 ///////////////////////////////////////////////////////////////////////////////
-void Icosphere::computeFaceNormal(const glm::vec3 v1, const glm::vec3 v2, const glm::vec3 v3, glm::vec3 n) {
+void Icosphere::computeFaceNormal(const glm::vec3 v1, const glm::vec3 v2, const glm::vec3 v3, glm::vec3& n) {
     const float EPSILON = 0.000001f;
 
     // default return value (0, 0, 0)
@@ -1034,7 +898,7 @@ void Icosphere::computeFaceNormal(const glm::vec3 v1, const glm::vec3 v2, const 
 ///////////////////////////////////////////////////////////////////////////////
 // return vertex normal (2nd param) by mormalizing the vertex vector
 ///////////////////////////////////////////////////////////////////////////////
-void Icosphere::computeVertexNormal(const glm::vec3 v, glm::vec3 normal) {
+void Icosphere::computeVertexNormal(const glm::vec3 v, glm::vec3& normal) {
     // normalize
     float scale = Icosphere::computeScaleForLength(v, 1);
     normal[0] = v[0] * scale;
@@ -1059,7 +923,7 @@ float Icosphere::computeScaleForLength(const glm::vec3 v, float length)
 // find middle point of 2 vertices
 // NOTE: new vertex must be resized, so the length is equal to the given length
 ///////////////////////////////////////////////////////////////////////////////
-void Icosphere::computeHalfVertex(const glm::vec3 v1, const glm::vec3 v2, float length, glm::vec3 newV) {
+void Icosphere::computeHalfVertex(const glm::vec3 v1, const glm::vec3 v2, float length, glm::vec3& newV) {
     newV[0] = v1[0] + v2[0];
     newV[1] = v1[1] + v2[1];
     newV[2] = v1[2] + v2[2];
@@ -1069,67 +933,6 @@ void Icosphere::computeHalfVertex(const glm::vec3 v1, const glm::vec3 v2, float 
     newV[2] *= scale;
 }
 
-
-
-///////////////////////////////////////////////////////////////////////////////
-// find middle texcoords of 2 tex coords and return new coord (3rd param)
-///////////////////////////////////////////////////////////////////////////////
-void Icosphere::computeHalfTexCoord(const glm::vec2 t1, const glm::vec2 t2, glm::vec2 newT) {
-    newT[0] = (t1[0] + t2[0]) * 0.5f;
-    newT[1] = (t1[1] + t2[1]) * 0.5f;
-}
-
-
-
-///////////////////////////////////////////////////////////////////////////////
-// This function used 20 non-shared line segments to determine if the given
-// texture coordinate is shared or no. If it is on the line segments, it is also
-// non-shared point
-//   00  01  02  03  04         //
-//   /\  /\  /\  /\  /\         //
-//  /  \/  \/  \/  \/  \        //
-// 05  06  07  08  09   \       //
-//   \   10  11  12  13  14     //
-//    \  /\  /\  /\  /\  /      //
-//     \/  \/  \/  \/  \/       //
-//      15  16  17  18  19      //
-///////////////////////////////////////////////////////////////////////////////
-bool Icosphere::isSharedTexCoord(const glm::vec2 t) {
-    // 20 non-shared line segments
-    const float S = 1.0f / 11;  // texture steps
-    const float T = 1.0f / 3;
-    static float segments[] = { S, 0,       0, T,       // 00 - 05
-                                S, 0,       S*2, T,     // 00 - 06
-                                S*3, 0,     S*2, T,     // 01 - 06
-                                S*3, 0,     S*4, T,     // 01 - 07
-                                S*5, 0,     S*4, T,     // 02 - 07
-                                S*5, 0,     S*6, T,     // 02 - 08
-                                S*7, 0,     S*6, T,     // 03 - 08
-                                S*7, 0,     S*8, T,     // 03 - 09
-                                S*9, 0,     S*8, T,     // 04 - 09
-                                S*9, 0,     1, T*2,     // 04 - 14
-                                0, T,       S*2, 1,     // 05 - 15
-                                S*3, T*2,   S*2, 1,     // 10 - 15
-                                S*3, T*2,   S*4, 1,     // 10 - 16
-                                S*5, T*2,   S*4, 1,     // 11 - 16
-                                S*5, T*2,   S*6, 1,     // 11 - 17
-                                S*7, T*2,   S*6, 1,     // 12 - 17
-                                S*7, T*2,   S*8, 1,     // 12 - 18
-                                S*9, T*2,   S*8, 1,     // 13 - 18
-                                S*9, T*2,   S*10, 1,    // 13 - 19
-                                1, T*2,     S*10, 1 };  // 14 - 19
-
-    // check the point with all 20 line segments
-    // if it is on the line segment, it is non-shared
-    int count = (int)(sizeof(segments) / sizeof(segments[0]));
-    for(int i = 0, j = 2; i < count; i+=4, j+=4)
-    {
-        if(Icosphere::isOnLineSegment(&segments[i], &segments[j], t))
-            return false;   // not shared
-    }
-
-    return true;
-}
 
 
 

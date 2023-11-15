@@ -39,13 +39,10 @@ public:
 
     // for vertex data
     [[nodiscard]] unsigned int getVertexCount() const {
-        return (unsigned int)vertices.size() / 3;
+        return (unsigned int)vertices.size();
     }
     [[nodiscard]] unsigned int getNormalCount() const {
-        return (unsigned int)normals.size() / 3;
-    }
-    [[nodiscard]] unsigned int getTexCoordCount() const {
-        return (unsigned int)texCoords.size() / 2;
+        return (unsigned int)normals.size();
     }
     [[nodiscard]] unsigned int getIndexCount() const {
         return (unsigned int)indices.size();
@@ -63,9 +60,6 @@ public:
     [[nodiscard]] unsigned int getNormalSize() const {
         return (unsigned int)normals.size() * sizeof(float);
     }
-    [[nodiscard]] unsigned int getTexCoordSize() const {
-        return (unsigned int)texCoords.size() * sizeof(float);
-    }
     [[nodiscard]] unsigned int getIndexSize() const {
         return (unsigned int)indices.size() * sizeof(unsigned int);
     }
@@ -73,38 +67,29 @@ public:
         return (unsigned int)lineIndices.size() * sizeof(unsigned int);
     }
 
-    [[nodiscard]] const float* getVertices() const {
+    [[nodiscard]] const glm::vec3* getVertices() const {
         if (vertices.empty())
         {
             return nullptr;
         }
         else
         {
-            return &vertices[0][0];
+            return &vertices[0];
         }
         
         //return vertices.data();
     }
-    const float* getNormals() const {
+    const glm::vec3* getNormals() const {
         if (normals.empty())
         {
             return nullptr;
         }
         else
         {
-            return &normals[0][0];
+            return &normals[0];
         }
     }
-    const float* getTexCoords() const {
-        if (texCoords.empty())
-        {
-            return nullptr;
-        }
-        else
-        {
-            return &texCoords[0][0];
-        }
-    }
+
     const unsigned int* getIndices() const {
         return indices.data();
     }
@@ -137,12 +122,10 @@ public:
 protected:
 private:
     // static functions
-    static void computeFaceNormal(const glm::vec3 v1, const glm::vec3 v2, const glm::vec3 v3, glm::vec3 normal);
-    static void computeVertexNormal(const glm::vec3 v, glm::vec3 normal);
+    static void computeFaceNormal(const glm::vec3 v1, const glm::vec3 v2, const glm::vec3 v3, glm::vec3& normal);
+    static void computeVertexNormal(const glm::vec3 v, glm::vec3& normal);
     static float computeScaleForLength(const glm::vec3, float length);
-    static void computeHalfVertex(const glm::vec3 v1, const glm::vec3 v2, float length, glm::vec3 newV);
-    static void computeHalfTexCoord(const glm::vec2 t1, const glm::vec2 t2, glm::vec2 newT);
-    static bool isSharedTexCoord(const glm::vec2 t);
+    static void computeHalfVertex(const glm::vec3 v1, const glm::vec3 v2, float length, glm::vec3& newV);
     static bool isOnLineSegment(const float a[2], const float b[2], const glm::vec2 c);
 
     // member functions
@@ -157,12 +140,10 @@ private:
     void addVertices(const glm::vec3 v1, const glm::vec3 v2, const glm::vec3 v3);
     void addNormal(float nx, float ny, float nz);
     void addNormals(const glm::vec3 n1, const glm::vec3 n2, const glm::vec3 n3);
-    void addTexCoord(float s, float t);
-    void addTexCoords(const glm::vec2 t1, const glm::vec2 t2, const glm::vec2 t3);
     void addIndices(unsigned int i1, unsigned int i2, unsigned int i3);
     void addSubLineIndices(
         unsigned int i1, unsigned int i2, unsigned int i3, unsigned int i4, unsigned int i5, unsigned int i6);
-    unsigned int addSubVertexAttribs(const glm::vec3 v, const  glm::vec3 n, const glm::vec2 t);
+    unsigned int addSubVertexAttribs(const glm::vec3 v, const  glm::vec3 n);
 
     // memeber vars
     float radius; // circumscribed radius
@@ -173,7 +154,6 @@ private:
     std::vector<unsigned int> vertex_index;
 
     std::vector<glm::vec3> normals;
-    std::vector<glm::vec2> texCoords;
     std::vector<unsigned int> indices;
     std::vector<unsigned int> lineIndices;
     std::map<std::pair<float, float>, unsigned int> sharedIndices; // indices of shared vertices, key is tex coord (s,t)
