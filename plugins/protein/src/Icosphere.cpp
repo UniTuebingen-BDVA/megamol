@@ -262,7 +262,6 @@ void Icosphere::buildVerticesFlat()
 
     glm::vec3 v0, v1, v2, v3, v4, v11;          // vertex positions
     glm::vec3 n;                                         // face normal
-    glm::vec2 t0, t1, t2, t3, t4, t11;    // texCoords
     unsigned int index = 0;
 
     // compute and add 20 tiangles of icosahedron first
@@ -369,171 +368,136 @@ void Icosphere::buildVerticesSmooth() {
 
     // smooth icosahedron has 14 non-shared (0 to 13) and
     // 8 shared vertices (14 to 21) (total 22 vertices)
-    //  00  01  02  03  04          //
-    //  /\  /\  /\  /\  /\          //
-    // /  \/  \/  \/  \/  \         //
-    //10--14--15--16--17--11        //
-    // \  /\  /\  /\  /\  /\        //
-    //  \/  \/  \/  \/  \/  \       //
-    //  12--18--19--20--21--13      //
-    //   \  /\  /\  /\  /\  /       //
-    //    \/  \/  \/  \/  \/        //
-    //    05  06  07  08  09        //
+    //  00  01  02  03  04          //  00  00  00  00  00         //v0                     //tmpv0
+    //  /\  /\  /\  /\  /\          //  /\  /\  /\  /\  /\          
+    // /  \/  \/  \/  \/  \         // /  \/  \/  \/  \/  \         
+    //10--14--15--16--17--11        //02--04--05--06--07--02       //v2 v4 v5 v6 v7         //tmpv1 tmpv2 tmpv3 tmpv4 tmpv5
+    // \  /\  /\  /\  /\  /\        // \  /\  /\  /\  /\  /\        
+    //  \/  \/  \/  \/  \/  \       //  \/  \/  \/  \/  \/  \       
+    //  12--18--19--20--21--13      //  03--08--09--10--11--03     //v3 v8 v9 v10 v11       //tmpv6 tmpv7 tmpv8 tmpv9 tmpv10
+    //   \  /\  /\  /\  /\  /       //   \  /\  /\  /\  /\  /
+    //    \/  \/  \/  \/  \/        //    \/  \/  \/  \/  \/
+    //    05  06  07  08  09        //    01  01  01  01  01       //v1                     //tmpv11
     // add 14 non-shared vertices first (index from 0 to 13)
-    addVertex(tmpVertices[0][0], tmpVertices[0][1], tmpVertices[0][2]);
-    addNormal(0, 0, 1);
-    /*
-    addVertex(tmpVertices[0], tmpVertices[1], tmpVertices[2]);      // v0 (top)
-    addNormal(0, 0, 1);
-    addTexCoord(S_STEP, 0);
-    */
-
-    addVertex(tmpVertices[0][0], tmpVertices[0][1], tmpVertices[0][2]); // v1
+    addVertex(tmpVertices[0][0], tmpVertices[0][1], tmpVertices[0][2]); //v0 (top)
     addNormal(0, 0, 1);
 
-    addVertex(tmpVertices[0][0], tmpVertices[0][1], tmpVertices[0][2]); // v2
-    addNormal(0, 0, 1);
-
-    addVertex(tmpVertices[0][0], tmpVertices[0][1], tmpVertices[0][2]); // v3
-    addNormal(0, 0, 1);
-
-    addVertex(tmpVertices[0][0], tmpVertices[0][1], tmpVertices[0][2]); // v4
-    addNormal(0, 0, 1);
-
-    addVertex(tmpVertices[11][0], tmpVertices[11][1], tmpVertices[11][2]); // v5 (bottom)
+    addVertex(tmpVertices[11][0], tmpVertices[11][1], tmpVertices[11][2]); // v5 (bottom)   //v1
     addNormal(0, 0, -1);
 
-    addVertex(tmpVertices[11][0], tmpVertices[11][1], tmpVertices[11][2]); // v6
-    addNormal(0, 0, -1);
-
-    addVertex(tmpVertices[11][0], tmpVertices[11][1], tmpVertices[11][2]);   // v7
-    addNormal(0, 0, -1);
-
-    addVertex(tmpVertices[11][0], tmpVertices[11][1], tmpVertices[11][2]);   // v8
-    addNormal(0, 0, -1);
-
-    addVertex(tmpVertices[11][0], tmpVertices[11][1], tmpVertices[11][2]);   // v9
-    addNormal(0, 0, -1);
-
-    v = tmpVertices[1];  // v10 (left)
+    v = tmpVertices[1];  // v10 (left)   //v2
     Icosphere::computeVertexNormal(v, n);
     addVertex(v[0], v[1], v[2]);
     addNormal(n[0], n[1], n[2]);
 
-    addVertex(v[0], v[1], v[2]);                                            // v11 (right)
-    addNormal(n[0], n[1], n[2]);
-
-    v = tmpVertices[6]; // v12 (left)
+    v = tmpVertices[6]; // v12 (left)   //v3
     Icosphere::computeVertexNormal(v, n);
     addVertex(v[0], v[1], v[2]);
-    addNormal(n[0], n[1], n[2]);
-
-    addVertex(v[0], v[1], v[2]);                                            // v13 (right)
     addNormal(n[0], n[1], n[2]);
 
     // add 8 shared vertices to array (index from 14 to 21)
-    v = tmpVertices[2]; // v14 (shared)
+    v = tmpVertices[2]; // v14 (shared)   //v4
     Icosphere::computeVertexNormal(v, n);
     addVertex(v[0], v[1], v[2]);
     addNormal(n[0], n[1], n[2]);
-    //sharedIndices[std::make_pair(S_STEP * 2, T_STEP)] = texCoords.size() / 2 - 1;
 
-    v = tmpVertices[3]; // v15 (shared)
+    v = tmpVertices[3]; // v15 (shared)   //v5
     Icosphere::computeVertexNormal(v, n);
     addVertex(v[0], v[1], v[2]);
     addNormal(n[0], n[1], n[2]);
-    //sharedIndices[std::make_pair(S_STEP * 4, T_STEP)] = texCoords.size() / 2 - 1;
 
-    v = tmpVertices[4]; // v16 (shared)
-    scale = Icosphere::computeScaleForLength(v, 1);
-    n[0] = v[0] * scale;    n[1] = v[1] * scale;    n[2] = v[2] * scale;
-    addVertex(v[0], v[1], v[2]);
-    addNormal(n[0], n[1], n[2]);
-    //sharedIndices[std::make_pair(S_STEP * 6, T_STEP)] = texCoords.size() / 2 - 1;
-
-    v = tmpVertices[5]; // v17 (shared)
+    v = tmpVertices[4]; // v16 (shared)   //v6
+    //scale = Icosphere::computeScaleForLength(v, 1);
+    //n[0] = v[0] * scale;    n[1] = v[1] * scale;    n[2] = v[2] * scale;
     Icosphere::computeVertexNormal(v, n);
     addVertex(v[0], v[1], v[2]);
     addNormal(n[0], n[1], n[2]);
-    //sharedIndices[std::make_pair(S_STEP * 8, T_STEP)] = texCoords.size() / 2 - 1;
 
-    v = tmpVertices[7]; // v18 (shared)
+    v = tmpVertices[5]; // v17 (shared)   //v7
     Icosphere::computeVertexNormal(v, n);
     addVertex(v[0], v[1], v[2]);
     addNormal(n[0], n[1], n[2]);
-    //sharedIndices[std::make_pair(S_STEP * 3, T_STEP * 2)] = texCoords.size() / 2 - 1;
 
-    v = tmpVertices[8]; // v19 (shared)
+    v = tmpVertices[7]; // v18 (shared)   //v8
     Icosphere::computeVertexNormal(v, n);
     addVertex(v[0], v[1], v[2]);
     addNormal(n[0], n[1], n[2]);
-    //sharedIndices[std::make_pair(S_STEP * 5, T_STEP * 2)] = texCoords.size() / 2 - 1;
 
-    v = tmpVertices[9]; // v20 (shared)
+    v = tmpVertices[8]; // v19 (shared)   //v9
     Icosphere::computeVertexNormal(v, n);
     addVertex(v[0], v[1], v[2]);
     addNormal(n[0], n[1], n[2]);
-    //sharedIndices[std::make_pair(S_STEP * 7, T_STEP * 2)] = texCoords.size() / 2 - 1;
 
-    v = tmpVertices[10]; // v21 (shared)
+    v = tmpVertices[9]; // v20 (shared)   //v10
     Icosphere::computeVertexNormal(v, n);
     addVertex(v[0], v[1], v[2]);
     addNormal(n[0], n[1], n[2]);
-    //sharedIndices[std::make_pair(S_STEP * 9, T_STEP * 2)] = texCoords.size() / 2 - 1;
 
-    // build index list for icosahedron (20 triangles)
-    addIndices( 0, 10, 14);      // 1st row (5 tris)
-    addIndices( 1, 14, 15);
-    addIndices( 2, 15, 16);
-    addIndices( 3, 16, 17);
-    addIndices( 4, 17, 11);
-    addIndices(10, 12, 14);      // 2nd row (10 tris)
-    addIndices(12, 18, 14);
-    addIndices(14, 18, 15);
-    addIndices(18, 19, 15);
-    addIndices(15, 19, 16);
-    addIndices(19, 20, 16);
-    addIndices(16, 20, 17);
-    addIndices(20, 21, 17);
-    addIndices(17, 21, 11);
-    addIndices(21, 13, 11);
-    addIndices( 5, 18, 12);      // 3rd row (5 tris)
-    addIndices( 6, 19, 18);
-    addIndices( 7, 20, 19);
-    addIndices( 8, 21, 20);
-    addIndices( 9, 13, 21);
+    v = tmpVertices[10]; // v21 (shared)  //v11
+    Icosphere::computeVertexNormal(v, n);
+    addVertex(v[0], v[1], v[2]);
+    addNormal(n[0], n[1], n[2]);
 
-    // add edge lines of icosahedron
-    lineIndices.push_back(0);   lineIndices.push_back(10);       // 00 - 10
-    lineIndices.push_back(1);   lineIndices.push_back(14);       // 01 - 14
-    lineIndices.push_back(2);   lineIndices.push_back(15);       // 02 - 15
-    lineIndices.push_back(3);   lineIndices.push_back(16);       // 03 - 16
-    lineIndices.push_back(4);   lineIndices.push_back(17);       // 04 - 17
-    lineIndices.push_back(10);  lineIndices.push_back(14);       // 10 - 14
-    lineIndices.push_back(14);  lineIndices.push_back(15);       // 14 - 15
-    lineIndices.push_back(15);  lineIndices.push_back(16);       // 15 - 16
-    lineIndices.push_back(16);  lineIndices.push_back(17);       // 10 - 14
-    lineIndices.push_back(17);  lineIndices.push_back(11);       // 17 - 11
-    lineIndices.push_back(10);  lineIndices.push_back(12);       // 10 - 12
-    lineIndices.push_back(12);  lineIndices.push_back(14);       // 12 - 14
-    lineIndices.push_back(14);  lineIndices.push_back(18);       // 14 - 18
-    lineIndices.push_back(18);  lineIndices.push_back(15);       // 18 - 15
-    lineIndices.push_back(15);  lineIndices.push_back(19);       // 15 - 19
-    lineIndices.push_back(19);  lineIndices.push_back(16);       // 19 - 16
-    lineIndices.push_back(16);  lineIndices.push_back(20);       // 16 - 20
-    lineIndices.push_back(20);  lineIndices.push_back(17);       // 20 - 17
-    lineIndices.push_back(17);  lineIndices.push_back(21);       // 17 - 21
-    lineIndices.push_back(21);  lineIndices.push_back(11);       // 21 - 11
-    lineIndices.push_back(12);  lineIndices.push_back(18);       // 12 - 18
-    lineIndices.push_back(18);  lineIndices.push_back(19);       // 18 - 19
-    lineIndices.push_back(19);  lineIndices.push_back(20);       // 19 - 20
-    lineIndices.push_back(20);  lineIndices.push_back(21);       // 20 - 21
-    lineIndices.push_back(21);  lineIndices.push_back(13);       // 21 - 13
-    lineIndices.push_back(5);   lineIndices.push_back(12);       // 05 - 12
-    lineIndices.push_back(6);   lineIndices.push_back(18);       // 06 - 18
-    lineIndices.push_back(7);   lineIndices.push_back(19);       // 07 - 19
-    lineIndices.push_back(8);   lineIndices.push_back(20);       // 08 - 20
-    lineIndices.push_back(9);   lineIndices.push_back(21);       // 09 - 21
+    //build index list for icosahedron (20 triangles)
+    //first row
+    addIndices( 0,  2,  4);
+    addIndices( 0,  4,  5);
+    addIndices( 0,  5,  6);
+    addIndices( 0,  6,  7);
+    addIndices( 0,  7,  2);
+    //second row
+    addIndices( 2,  3,  4);
+    addIndices( 3,  8,  4);
+    addIndices( 4,  8,  5);
+    addIndices( 8,  9,  5);
+    addIndices( 5,  9,  6);
+    addIndices( 9, 10,  6);
+    addIndices( 6, 10,  7);
+    addIndices(10, 11,  7);
+    addIndices( 7, 11,  2);
+    addIndices(11,  3,  2);
+    //third row
+    addIndices( 1,  8,  3);
+    addIndices( 1,  9,  8);
+    addIndices( 1, 10,  9);
+    addIndices( 1, 11, 10);
+    addIndices( 1,  3, 11);
+
+    //add edge lines of icosahedron
+    //first row
+    lineIndices.push_back(0);   lineIndices.push_back(2);
+    lineIndices.push_back(0);   lineIndices.push_back(4);
+    lineIndices.push_back(0);   lineIndices.push_back(5);
+    lineIndices.push_back(0);   lineIndices.push_back(6);
+    lineIndices.push_back(0);   lineIndices.push_back(7);
+
+    lineIndices.push_back(2);   lineIndices.push_back(4);
+    lineIndices.push_back(4);   lineIndices.push_back(5);
+    lineIndices.push_back(5);   lineIndices.push_back(6);
+    lineIndices.push_back(6);   lineIndices.push_back(7);
+    lineIndices.push_back(7);   lineIndices.push_back(2);
+    //second row
+    lineIndices.push_back(2);   lineIndices.push_back(3);
+    lineIndices.push_back(3);   lineIndices.push_back(4);
+    lineIndices.push_back(4);   lineIndices.push_back(8);
+    lineIndices.push_back(8);   lineIndices.push_back(5);
+    lineIndices.push_back(5);   lineIndices.push_back(9);
+    lineIndices.push_back(9);   lineIndices.push_back(6);
+    lineIndices.push_back(6);   lineIndices.push_back(10);
+    lineIndices.push_back(10);  lineIndices.push_back(7);
+    lineIndices.push_back(7);   lineIndices.push_back(11);
+    lineIndices.push_back(11);  lineIndices.push_back(2);
+    lineIndices.push_back(3);   lineIndices.push_back(8);
+    lineIndices.push_back(8);   lineIndices.push_back(9);
+    lineIndices.push_back(9);   lineIndices.push_back(10);
+    lineIndices.push_back(10);  lineIndices.push_back(11);
+    lineIndices.push_back(11);  lineIndices.push_back(3);
+    //third row
+    lineIndices.push_back(1);   lineIndices.push_back(3);
+    lineIndices.push_back(1);   lineIndices.push_back(8);
+    lineIndices.push_back(1);   lineIndices.push_back(9);
+    lineIndices.push_back(1);   lineIndices.push_back(10);
+    lineIndices.push_back(1);   lineIndices.push_back(11);
 
     // subdivide icosahedron
     subdivideVerticesSmooth();

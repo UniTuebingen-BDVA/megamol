@@ -109,6 +109,11 @@ protected:
     /** The data update hash */
     SIZE_T datahash;
 
+    //Datenstruktur zum speichern geschnittener Dreiecke
+    struct CutTri {
+        unsigned int v1, v2, v3, atomIndex;
+    };
+
 private:
     /**
      * Gets the data from the source.
@@ -287,6 +292,8 @@ private:
     std::vector<float> normal;
     std::vector<float> color;
     std::vector<unsigned int> face;
+
+    std::vector<CutTri> cutTriangles;
 
     // bools
     bool isFlatShading;

@@ -545,7 +545,7 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
 
     int atomCnt = mol->AtomCount();
     if(isDebug) {
-        atomCnt = 6;
+        atomCnt = 4;
     }
 
 
@@ -623,6 +623,17 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                     mol->AtomTypes()[mol->AtomTypeIndices()[i]].Radius()) {
                     //color.at(j*3) = 1.0f;
                     muss_raus.at(j) = true;
+                    /*
+                    CutTri cutTriangle = {
+                        //wandle lokale Indizes zu globalen Indizes um
+                        ico->getVertexCount() * i + ico->getIndices()[j + 0],
+                        ico->getVertexCount() * i + ico->getIndices()[j + 1],
+                        ico->getVertexCount() * i + ico->getIndices()[j + 2],
+                        i
+                    };
+                    cutTriangles.push_back(cutTriangle);
+                    //std::cout << "1: " << cutTriangle.v1 << "2: " << cutTriangle.v2 << "3: " << cutTriangle.v3 << "Index: " << cutTriangle.atomIndex << std::endl;
+                    */
                 }
             }
         }
