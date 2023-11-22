@@ -93,6 +93,14 @@ public:
         probeRadius = rad;
     };
 
+    struct PairComparator {
+        bool operator()(const std::pair<unsigned int, unsigned int>& a, const std::pair<unsigned int, unsigned int>& b) const {
+            return std::minmax(a.first, a.second) < std::minmax(b.first, b.second);
+    }
+    };
+    std::set<std::pair<unsigned int, unsigned int>, PairComparator> atomCollisions;
+
+
 protected:
     /**
      * Implementation of 'Create'.
@@ -308,6 +316,7 @@ private:
 
     static std::vector<std::vector<unsigned int>> getMultipleVertices(Icosphere* pIcosphere);
     std::vector<unsigned int> findVector(const std::vector<unsigned int>& edgelord);
+
 };
 
 } // namespace protein_gl

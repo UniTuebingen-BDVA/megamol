@@ -190,7 +190,6 @@ void Icosphere::updateRadius()
 }
 
 
-
 ///////////////////////////////////////////////////////////////////////////////
 // compute 12 vertices of icosahedron using spherical coordinates
 // The north pole is at (0, 0, r) and the south pole is at (0,0,-r).
@@ -232,10 +231,10 @@ std::vector<glm::vec3> Icosphere::computeIcosahedronVertices()
     }
 
     // the last bottom vertex (0, 0, -r)
-    vertices[11] = glm::vec3(0.0f, 0.0f, radius);
+    vertices[11] = glm::vec3(0.0f, 0.0f, -radius);
     
 
-    return vertices;
+    return vertices; 
 }
 
 
@@ -368,77 +367,77 @@ void Icosphere::buildVerticesSmooth() {
 
     // smooth icosahedron has 14 non-shared (0 to 13) and
     // 8 shared vertices (14 to 21) (total 22 vertices)
-    //  00  01  02  03  04          //  00  00  00  00  00         //v0                     //tmpv0
-    //  /\  /\  /\  /\  /\          //  /\  /\  /\  /\  /\          
-    // /  \/  \/  \/  \/  \         // /  \/  \/  \/  \/  \         
-    //10--14--15--16--17--11        //02--04--05--06--07--02       //v2 v4 v5 v6 v7         //tmpv1 tmpv2 tmpv3 tmpv4 tmpv5
-    // \  /\  /\  /\  /\  /\        // \  /\  /\  /\  /\  /\        
-    //  \/  \/  \/  \/  \/  \       //  \/  \/  \/  \/  \/  \       
-    //  12--18--19--20--21--13      //  03--08--09--10--11--03     //v3 v8 v9 v10 v11       //tmpv6 tmpv7 tmpv8 tmpv9 tmpv10
-    //   \  /\  /\  /\  /\  /       //   \  /\  /\  /\  /\  /
-    //    \/  \/  \/  \/  \/        //    \/  \/  \/  \/  \/
-    //    05  06  07  08  09        //    01  01  01  01  01       //v1                     //tmpv11
+    //        OLD                   //        NEW                  //        WRONG
+    //  00  01  02  03  04          //  00  00  00  00  00         //  00  00  00  00  00         //v0                     //tmpv0
+    //  /\  /\  /\  /\  /\          //  /\  /\  /\  /\  /\         //  /\  /\  /\  /\  /\          
+    // /  \/  \/  \/  \/  \         // /  \/  \/  \/  \/  \        // /  \/  \/  \/  \/  \    
+    //10--14--15--16--17--11        //02--04--05--06--07--02       //02--06--07--08--09--03       //v2 v4 v5 v6 v7 v2      //tmpv1 tmpv2 tmpv3 tmpv4 tmpv5
+    // \  /\  /\  /\  /\  /\        // \  /\  /\  /\  /\  /\       // \  /\  /\  /\  /\  /\        
+    //  \/  \/  \/  \/  \/  \       //  \/  \/  \/  \/  \/  \      //  \/  \/  \/  \/  \/  \       
+    //  12--18--19--20--21--13      //  03--08--09--10--11--03     //  04--10--11--12--13--05     //v3 v8 v9 v10 v11 v3    //tmpv6 tmpv7 tmpv8 tmpv9 tmpv10
+    //   \  /\  /\  /\  /\  /       //   \  /\  /\  /\  /\  /      //   \  /\  /\  /\  /\  / 
+    //    \/  \/  \/  \/  \/        //    \/  \/  \/  \/  \/       //    \/  \/  \/  \/  \/
+    //    05  06  07  08  09        //    01  01  01  01  01       //    01  01  01  01  01       //v1                     //tmpv11
     // add 14 non-shared vertices first (index from 0 to 13)
     addVertex(tmpVertices[0][0], tmpVertices[0][1], tmpVertices[0][2]); //v0 (top)
     addNormal(0, 0, 1);
 
-    addVertex(tmpVertices[11][0], tmpVertices[11][1], tmpVertices[11][2]); // v5 (bottom)   //v1
+    addVertex(tmpVertices[11][0], tmpVertices[11][1], tmpVertices[11][2]); //v1 (bottom)
     addNormal(0, 0, -1);
 
-    v = tmpVertices[1];  // v10 (left)   //v2
+    v = tmpVertices[1];  //v2
     Icosphere::computeVertexNormal(v, n);
     addVertex(v[0], v[1], v[2]);
     addNormal(n[0], n[1], n[2]);
 
-    v = tmpVertices[6]; // v12 (left)   //v3
+    v = tmpVertices[6]; //v3
     Icosphere::computeVertexNormal(v, n);
     addVertex(v[0], v[1], v[2]);
     addNormal(n[0], n[1], n[2]);
 
-    // add 8 shared vertices to array (index from 14 to 21)
-    v = tmpVertices[2]; // v14 (shared)   //v4
+    v = tmpVertices[2]; //v4
     Icosphere::computeVertexNormal(v, n);
     addVertex(v[0], v[1], v[2]);
     addNormal(n[0], n[1], n[2]);
 
-    v = tmpVertices[3]; // v15 (shared)   //v5
+    v = tmpVertices[3]; //v5
     Icosphere::computeVertexNormal(v, n);
     addVertex(v[0], v[1], v[2]);
     addNormal(n[0], n[1], n[2]);
 
-    v = tmpVertices[4]; // v16 (shared)   //v6
+    v = tmpVertices[4]; //v6
     //scale = Icosphere::computeScaleForLength(v, 1);
     //n[0] = v[0] * scale;    n[1] = v[1] * scale;    n[2] = v[2] * scale;
     Icosphere::computeVertexNormal(v, n);
     addVertex(v[0], v[1], v[2]);
     addNormal(n[0], n[1], n[2]);
 
-    v = tmpVertices[5]; // v17 (shared)   //v7
+    v = tmpVertices[5]; //v7
     Icosphere::computeVertexNormal(v, n);
     addVertex(v[0], v[1], v[2]);
     addNormal(n[0], n[1], n[2]);
 
-    v = tmpVertices[7]; // v18 (shared)   //v8
+    v = tmpVertices[7]; //v8
     Icosphere::computeVertexNormal(v, n);
     addVertex(v[0], v[1], v[2]);
     addNormal(n[0], n[1], n[2]);
 
-    v = tmpVertices[8]; // v19 (shared)   //v9
+    v = tmpVertices[8]; //v9
     Icosphere::computeVertexNormal(v, n);
     addVertex(v[0], v[1], v[2]);
     addNormal(n[0], n[1], n[2]);
 
-    v = tmpVertices[9]; // v20 (shared)   //v10
+    v = tmpVertices[9]; //v10
     Icosphere::computeVertexNormal(v, n);
     addVertex(v[0], v[1], v[2]);
     addNormal(n[0], n[1], n[2]);
 
-    v = tmpVertices[10]; // v21 (shared)  //v11
+    v = tmpVertices[10]; //v11
     Icosphere::computeVertexNormal(v, n);
     addVertex(v[0], v[1], v[2]);
     addNormal(n[0], n[1], n[2]);
 
-    //build index list for icosahedron (20 triangles)
+    //build index list for icosahedron (20 triangles)  
     //first row
     addIndices( 0,  2,  4);
     addIndices( 0,  4,  5);
@@ -462,8 +461,8 @@ void Icosphere::buildVerticesSmooth() {
     addIndices( 1, 10,  9);
     addIndices( 1, 11, 10);
     addIndices( 1,  3, 11);
-
-    //add edge lines of icosahedron
+    
+    //add edge lines of icosahedron   
     //first row
     lineIndices.push_back(0);   lineIndices.push_back(2);
     lineIndices.push_back(0);   lineIndices.push_back(4);
@@ -487,6 +486,7 @@ void Icosphere::buildVerticesSmooth() {
     lineIndices.push_back(10);  lineIndices.push_back(7);
     lineIndices.push_back(7);   lineIndices.push_back(11);
     lineIndices.push_back(11);  lineIndices.push_back(2);
+
     lineIndices.push_back(3);   lineIndices.push_back(8);
     lineIndices.push_back(8);   lineIndices.push_back(9);
     lineIndices.push_back(9);   lineIndices.push_back(10);
@@ -498,7 +498,7 @@ void Icosphere::buildVerticesSmooth() {
     lineIndices.push_back(1);   lineIndices.push_back(9);
     lineIndices.push_back(1);   lineIndices.push_back(10);
     lineIndices.push_back(1);   lineIndices.push_back(11);
-
+    
     // subdivide icosahedron
     subdivideVerticesSmooth();
 
@@ -698,7 +698,6 @@ void Icosphere::addVertex(float x, float y, float z)
     glm::vec3 xyz(x, y, z);
     vertices.emplace_back(xyz);
 }
-
 
 
 ///////////////////////////////////////////////////////////////////////////////

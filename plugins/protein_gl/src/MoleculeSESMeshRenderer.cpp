@@ -38,6 +38,7 @@
 
 
 #include "protein/Icosphere.h"
+#include "protein/Torus.h"
 
 using namespace megamol;
 using namespace megamol::core;
@@ -522,7 +523,7 @@ void MoleculeSESMeshRenderer::RenderReducedSurface(protein::ReducedSurface* rs) 
  */
 void MoleculeSESMeshRenderer::deinitialise() {}
 
-/*
+    /*
  * MoleculeSESMeshRenderer::getDataCallback
  */
 bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
@@ -545,7 +546,7 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
 
     int atomCnt = mol->AtomCount();
     if(isDebug) {
-        atomCnt = 4;
+        atomCnt = 3;
     }
 
 
@@ -597,13 +598,22 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                 normal.push_back(ico->getNormals()[j][1]);
                 normal.push_back(ico->getNormals()[j][2]);
 
-                color.push_back(0.6f);
-                color.push_back(0.6f);
-                color.push_back(0.6f);
+                /*
+                if (j == 0) {
+                    color.push_back(1.0f);
+                    color.push_back(0.0f);
+                    color.push_back(0.0f);
+                } else {
+                */
 
+                    color.push_back(0.6f);
+                    color.push_back(0.6f);
+                    color.push_back(0.6f);
+                //}
                 muss_raus.push_back(false);
             }
         }
+
         for (auto i = 0; i < atomCnt; i++) {
             //Grenzen für Interatkion
             unsigned int lower_bound = vertex_counter / atomCnt * i;
@@ -623,7 +633,7 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                     mol->AtomTypes()[mol->AtomTypeIndices()[i]].Radius()) {
                     //color.at(j*3) = 1.0f;
                     muss_raus.at(j) = true;
-                    /*
+                    
                     CutTri cutTriangle = {
                         //wandle lokale Indizes zu globalen Indizes um
                         ico->getVertexCount() * i + ico->getIndices()[j + 0],
@@ -631,19 +641,107 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                         ico->getVertexCount() * i + ico->getIndices()[j + 2],
                         i
                     };
+                    /*
                     cutTriangles.push_back(cutTriangle);
-                    //std::cout << "1: " << cutTriangle.v1 << "2: " << cutTriangle.v2 << "3: " << cutTriangle.v3 << "Index: " << cutTriangle.atomIndex << std::endl;
+                    std::cout << "1: " << cutTriangle.v1 << "   " 
+                              << "2: " << cutTriangle.v2 << "   "
+                              << "3: " << cutTriangle.v3 << "   "
+                              << "Index: " << cutTriangle.atomIndex << std::endl;
                     */
+                    int atomIndex1 = i;
+                    int atomIndex2 = j / ico->getVertexCount();
+
+                    atomCollisions.insert({atomIndex1, atomIndex2});
+                    // check for triple collisions?
+   
+
+
                 }
             }
         }
+        std::cout << "Size: " << atomCollisions.size() << std::endl;
+        
+        for (auto elem : atomCollisions) {
+            std::cout << "First: " << elem.first << "  Second: " << elem.second << std::endl; 
+        }
+
+        glm::vec3 torusCenter;
+        float torusRad;
+        int numSegments = 30;
+        int numRings = 20;
+        std::vector<float> torusVertices;
+        std::vector<float> torusNormals;
+        std::vector<unsigned int> torusIndices;
+
+        for (auto elem : atomCollisions) {
+            //Torus* torus = new Torus(glm::vec3(0, 0, 0), 0, probeRadius, numSegments, numRings);
+            //Torus torus(glm::vec3(0, 0, 0), 0, probeRadius, numSegments, numRings);
+        
+            
+            unsigned int atomIndex1 = elem.first;
+            unsigned int atomIndex2 = elem.second;
+
+            //std::cout << "AtomIndices: " << atomIndex1 << "   " << atomIndex2 << std::endl;
+
+            float atomRadius1 = mol->AtomTypes()[mol->AtomTypeIndices()[atomIndex1]].Radius();
+            float atomRadius2 = mol->AtomTypes()[mol->AtomTypeIndices()[atomIndex2]].Radius();
+
+            glm::vec3 atomPos1(mol->AtomPositions()[3 * atomIndex1 + 0],
+                               mol->AtomPositions()[3 * atomIndex1 + 1],
+                               mol->AtomPositions()[3 * atomIndex1 + 2]);
+
+            glm::vec3 atomPos2(mol->AtomPositions()[3 * atomIndex2 + 0],
+                               mol->AtomPositions()[3 * atomIndex2 + 1],
+                               mol->AtomPositions()[3 * atomIndex2 + 2]);
+
+            //float distance = Torus::getDistance(atomPos1, atomPos2);
+
+            //glm::vec3 center = Torus::getTorusCenter(atomPos1, atomPos2, atomRadius1, atomRadius2, probeRadius);
+            //float radius = Torus::getTorusRadius(atomRadius1, atomRadius2, probeRadius, distance);
+            
+            //Torus torus(center, radius, probeRadius, numSegments, numRings);
+            //torus.generateTorus();
+
+            //torusVertices.push_back(torus.getVertices());
+            /*
+            for (int i = 0; i < torus.getVertexSize(); i++) {
+                torusVertices.push_back(torus.getVertices()[i][0]);
+                torusVertices.push_back(torus.getVertices()[i][1]);
+                torusVertices.push_back(torus.getVertices()[i][2]);
+            }
+
+            for (int i = 0; i < torus.getNormalSize(); i++) {
+                torusNormals.push_back(torus.getNormals()[i][0]);
+                torusNormals.push_back(torus.getNormals()[i][1]);
+                torusNormals.push_back(torus.getNormals()[i][2]);
+            }
+
+            for (int i = 0; i < torus.getIndexSize(); i++) {
+                torusIndices.push_back(torus.getIndices()[i]);
+            }
+            */
+            
+
+        }
+        
+        /*
+        for (auto elem : torusVertices) {
+            vertex.push_back(elem);
+        }
+
+        for (auto elem : torusNormals) {
+            normal.push_back(elem);
+        }
+        */
+        
         std::tuple<unsigned int, int> bla;
         bla = {1, 2};
         int xx = std::get<1>(bla);
 
     //TEST KUGEL ZUM DEBUGGEN in grün
+        /*
     std::vector<int> zusatz = {79, 80, 337, 248, 86, 87, 89, 93, 95, 32, 97, 17, 110, 111, 116, 120}; //84 == 80 247 oder 333
-
+        
         for (int i : zusatz) {
 
 
@@ -676,7 +774,7 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                 }
             }
         }
-
+        */
         int face_counter = (int)(ico->getIndexCount() * atomCnt);
         std::vector<std::vector<std::tuple<unsigned int, int>>> referenceToOtherVertice(
             ico->getVertexCount() * atomCnt);
@@ -694,7 +792,9 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
          */
 
         // Gehe jedes Atom durch           | zusatz ist debug
-        for (auto i = 0; i < atomCnt + zusatz.size(); i++) {
+       // for (auto i = 0; i < atomCnt + zusatz.size(); i++) {
+       for (auto i = 0; i < atomCnt; i++) {
+
             std::vector<unsigned int> atomEdgeVerticeVector;
 
             int redCounter = 0;
@@ -800,6 +900,7 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
      *  Hier muss der neue Algorithmus rein.
      *  Komme an, schaue nächste Vertices an.
      */
+        
     for (int atom = 0; atom < edgeVerticesPerAtom.size(); ++atom) {
         for (int vertices = 0; vertices < edgeVerticesPerAtom[atom].size(); vertices = vertices + 2) {
             unsigned int a = edgeVerticesPerAtom[atom].at(vertices + 0); // 79
@@ -853,8 +954,10 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
 
             }
         }
+        
         delete ico;
     }
+    
 
 
     //TODO: Kann rausoptimiert werden.
