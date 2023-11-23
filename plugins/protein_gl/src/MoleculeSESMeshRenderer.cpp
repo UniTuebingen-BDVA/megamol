@@ -8,6 +8,10 @@
 
 #define _USE_MATH_DEFINES 1
 
+#ifndef M_PI
+#define M_PI 3.141592653589793238462643383279502884L
+#endif
+
 #include "MoleculeSESMeshRenderer.h"
 #include "glm/gtx/string_cast.hpp"
 #include "mmcore/param/BoolParam.h"
@@ -546,7 +550,7 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
 
     int atomCnt = mol->AtomCount();
     if(isDebug) {
-        atomCnt = 3;
+        atomCnt = 0;
     }
 
 
@@ -641,43 +645,33 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                         ico->getVertexCount() * i + ico->getIndices()[j + 2],
                         i
                     };
-                    /*
-                    cutTriangles.push_back(cutTriangle);
-                    std::cout << "1: " << cutTriangle.v1 << "   " 
-                              << "2: " << cutTriangle.v2 << "   "
-                              << "3: " << cutTriangle.v3 << "   "
-                              << "Index: " << cutTriangle.atomIndex << std::endl;
-                    */
+
                     int atomIndex1 = i;
                     int atomIndex2 = j / ico->getVertexCount();
 
                     atomCollisions.insert({atomIndex1, atomIndex2});
                     // check for triple collisions?
-   
-
-
                 }
             }
         }
-        std::cout << "Size: " << atomCollisions.size() << std::endl;
-        
-        for (auto elem : atomCollisions) {
-            std::cout << "First: " << elem.first << "  Second: " << elem.second << std::endl; 
-        }
 
-        glm::vec3 torusCenter;
-        float torusRad;
         int numSegments = 30;
         int numRings = 20;
+
+        for (int i = 0; i <= numRings; i++) {
+            for (int j = 0; j <= numSegments; j++) {
+                color.push_back(0.6f);
+                color.push_back(0.6f);
+                color.push_back(0.6f);
+            }
+        }
         std::vector<float> torusVertices;
         std::vector<float> torusNormals;
         std::vector<unsigned int> torusIndices;
-
-        for (auto elem : atomCollisions) {
-            //Torus* torus = new Torus(glm::vec3(0, 0, 0), 0, probeRadius, numSegments, numRings);
-            //Torus torus(glm::vec3(0, 0, 0), 0, probeRadius, numSegments, numRings);
-        
-            
+        std::vector<unsigned int> torusLineIndices;
+        std::vector<unsigned int> torusFaceIndices;
+        /*
+        for (auto elem : atomCollisions) {            
             unsigned int atomIndex1 = elem.first;
             unsigned int atomIndex2 = elem.second;
 
@@ -694,37 +688,53 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                                mol->AtomPositions()[3 * atomIndex2 + 1],
                                mol->AtomPositions()[3 * atomIndex2 + 2]);
 
-            //float distance = Torus::getDistance(atomPos1, atomPos2);
-
-            //glm::vec3 center = Torus::getTorusCenter(atomPos1, atomPos2, atomRadius1, atomRadius2, probeRadius);
-            //float radius = Torus::getTorusRadius(atomRadius1, atomRadius2, probeRadius, distance);
-            
-            //Torus torus(center, radius, probeRadius, numSegments, numRings);
-            //torus.generateTorus();
+            float distance = Torus::getDistance(atomPos1, atomPos2);
+            glm::vec3 center = Torus::getTorusCenter(atomPos1, atomPos2, atomRadius1, atomRadius2, probeRadius);
+            float radius = Torus::getTorusRadius(atomRadius1, atomRadius2, probeRadius, distance);
+            Torus torus(center, radius, numSegments, numRings);
+            torus.generateTorus(probeRadius);
 
             //torusVertices.push_back(torus.getVertices());
-            /*
-            for (int i = 0; i < torus.getVertexSize(); i++) {
-                torusVertices.push_back(torus.getVertices()[i][0]);
-                torusVertices.push_back(torus.getVertices()[i][1]);
-                torusVertices.push_back(torus.getVertices()[i][2]);
-            }
-
-            for (int i = 0; i < torus.getNormalSize(); i++) {
-                torusNormals.push_back(torus.getNormals()[i][0]);
-                torusNormals.push_back(torus.getNormals()[i][1]);
-                torusNormals.push_back(torus.getNormals()[i][2]);
-            }
-
-            for (int i = 0; i < torus.getIndexSize(); i++) {
-                torusIndices.push_back(torus.getIndices()[i]);
-            }
-            */
             
+            
+        }
+        */
 
+        Torus torus(glm::vec3(0, 0, 0), 4, numSegments, numRings);
+        torus.generateTorus(probeRadius);
+
+        for (int i = 0; i < torus.getVertexCount(); i++) {
+            torusVertices.push_back(torus.getVertices()[i][0]);
+            torusVertices.push_back(torus.getVertices()[i][1]);
+            torusVertices.push_back(torus.getVertices()[i][2]);
+        }
+
+        for (int i = 0; i < torus.getNormalCount(); i++) {
+            torusNormals.push_back(torus.getNormals()[i][0]);
+            torusNormals.push_back(torus.getNormals()[i][1]);
+            torusNormals.push_back(torus.getNormals()[i][2]);
+        }
+
+        for (int i = 0; i < torus.getIndexCount(); i++) {
+            torusIndices.push_back(torus.getIndices()[i]);
+        }
+
+        for (int i = 0; i < torus.getLineIndicesCount(); i++) {
+            torusLineIndices.push_back(torus.getLineIndices()[i]);
+        }
+
+        for (int i = 0; i < torus.getIndexCount(); i++) {
+            torusIndices.push_back(torus.getIndices()[i]);
+        }
+
+        for (int i = 0; i < torus.getLineIndicesCount(); i++) {
+            torusLineIndices.push_back(torus.getLineIndices()[i]);
+        }
+
+        for (int i = 0; i < torus.faceIndices.size(); i++) {
+            torusFaceIndices.push_back(torus.faceIndices[i]);
         }
         
-        /*
         for (auto elem : torusVertices) {
             vertex.push_back(elem);
         }
@@ -732,8 +742,12 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
         for (auto elem : torusNormals) {
             normal.push_back(elem);
         }
-        */
+
+        for (auto elem : torusFaceIndices) {
+            face.push_back(elem);
+        }
         
+
         std::tuple<unsigned int, int> bla;
         bla = {1, 2};
         int xx = std::get<1>(bla);
@@ -1081,6 +1095,7 @@ std::vector<unsigned int> MoleculeSESMeshRenderer::findNearestVertice(const std:
 }
 std::vector<std::vector<unsigned int>> MoleculeSESMeshRenderer::getMultipleVertices(Icosphere* pIcosphere) {
     std::vector<std::vector<unsigned int>> multipleVertexVector(pIcosphere->getVertexCount());
+    //1953 torusVertexCount 
     for (int i = 0; i < pIcosphere->getVertexCount(); ++i) {
         // doppelte for schleife, gehe jedes vertice durch und schaue die vertices an
         for (int j = i+1; j < pIcosphere->getVertexCount(); ++j) {

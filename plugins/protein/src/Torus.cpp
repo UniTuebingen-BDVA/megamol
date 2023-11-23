@@ -21,37 +21,50 @@ void Torus::generateTorus(float probeRadius) {
     float pi = M_PI;
     for (int i = 0; i <= numRings; ++i) {
         for (int j = 0; j <= numSegments; ++j) {
+            //winkelpositionen der verticecs
             float theta = 2 * pi * static_cast<float>(j) / static_cast<float>(numSegments);
             float phi = 2 * pi * static_cast<float>(i) / static_cast<float>(numRings);
 
-            float x = (radius + probeRadius * cos(phi)) * cos(theta);
-            float y = (radius + probeRadius * cos(phi)) * sin(theta);
-            float z = probeRadius * sin(phi);
+            float x = center.x + (radius + probeRadius * cos(phi)) * cos(theta);
+            float y = center.y + (radius + probeRadius * cos(phi)) * sin(theta);
+            float z = center.z + probeRadius * sin(phi);
+
 
             // Füge den Vertex hinzu
             addVertex(x, y, z);
 
-            glm::vec3 normal = glm::normalize(glm::vec3(x, y, z));
-            addNormal(normal.x, normal.y, normal.z);
-        }
-    }
+            float scale = 1.0f / glm::length(glm::vec3(x, y, z));
+            float n1 = x * scale * -1;
+            float n2 = y * scale * -1;
+            float n3 = z * scale * -1;
+            addNormal(n1, n2, n3);
 
-    // Erzeuge die Indizes für die Dreiecke
-    for (int i = 0; i < numRings; ++i) {
-        for (int j = 0; j < numSegments; ++j) {
             // Erster Punkt im Dreieck
-            addIndices(i * (numSegments + 1) + j,
-                      (i + 1) * (numSegments + 1) + j,
-                       i * (numSegments + 1) + j + 1);
-            
+            addIndices(i * (numSegments + 1) + j + 1, (i + 1) * (numSegments + 1) + j, i * (numSegments + 1) + j);
 
             // Zweiter Punkt im Dreieck
-            addIndices((i + 1) * (numSegments + 1) + j,
-                       (i + 1) * (numSegments + 1) + j + 1,
-                        i * (numSegments + 1) + j + 1);
+            addIndices(i * (numSegments + 1) + j + 1, (i + 1) * (numSegments + 1) + j + 1, i * (numSegments + 1) + j + 1);
+            // Füge Linienindizes hinzu
+            lineIndices.push_back(i * (numSegments + 1) + j);
+            lineIndices.push_back(i * (numSegments + 1) + (j + 1));
 
+            lineIndices.push_back(i * (numSegments + 1) + j);
+            lineIndices.push_back((i + 1) * (numSegments + 1) + j);
+            
+            /*
             unsigned int currentIndex = i * (numSegments + 1) + j;
             faceIndices.push_back(currentIndex);
+            */
+            
+            faceIndices.push_back((numSegments + 1) * i + j);
+            faceIndices.push_back((numSegments + 1) * (i + 1) + j);
+            faceIndices.push_back((numSegments + 1) * i + j + 1);
+
+            // Zweiter Punkt im Dreieck
+            faceIndices.push_back((numSegments + 1) * (i + 1) + j);
+            faceIndices.push_back((numSegments + 1) * (i + 1) + j + 1);
+            faceIndices.push_back((numSegments + 1) * i + j + 1);
+            
         }
     }
 }
@@ -59,14 +72,14 @@ void Torus::generateTorus(float probeRadius) {
 const float Torus::getDistance(glm::vec3 atomPosition1, glm::vec3 atomPosition2) {
     float distance = glm::distance(atomPosition1, atomPosition2);
 
-    return distance;
+    return distance; //d_ij
 }
 
 const glm::vec3 Torus::getTorusAxisUnitVec(glm::vec3 atomPosition1, glm::vec3 atomPosition2) {
     float distance = getDistance(atomPosition1, atomPosition2);
     glm::vec3 axisUnitVec = (atomPosition2 - atomPosition2) / distance;
 
-    return axisUnitVec;
+    return axisUnitVec; //u_ij
 }
 
 const glm::vec3 Torus::getTorusCenter(glm::vec3 atomPosition1, glm::vec3 atomPosition2, float atomRadius1, float atomRadius2, float probeRadius) {
@@ -75,14 +88,14 @@ const glm::vec3 Torus::getTorusCenter(glm::vec3 atomPosition1, glm::vec3 atomPos
                             0.5f * (atomPosition2 - atomPosition1) *
                             ((std::powf((atomRadius1 + probeRadius), 2)) - (std::powf((atomRadius2 + probeRadius), 2))) / powf(distance, 2);
 
-    return torusCenter;
+    return torusCenter; //t_ij
 }
 
 const float Torus::getTorusRadius(float atomRadius1, float atomRadius2, float probeRadius, float distance) {
     float torusRadius = 0.5f * powf((powf((atomRadius1 + atomRadius2 + 2 * probeRadius), 0.5f) - powf(distance, 2)), 0.5f) *
-                         powf((powf(distance, 2) - powf((atomRadius1 - atomRadius2), 2)), 0.5f) / distance;
+                        powf((powf(distance, 2) - powf((atomRadius1 - atomRadius2), 2)), 0.5f) / distance;
 
-    return torusRadius;
+    return torusRadius; //r_ij
 }
 
 const float Torus::getBaseTriangleAngle(glm::vec3 atomPosition1, glm::vec3 atomPosition2, glm::vec3 atomPosition3) {
@@ -91,14 +104,16 @@ const float Torus::getBaseTriangleAngle(glm::vec3 atomPosition1, glm::vec3 atomP
 
     float dotProduct = glm::dot(axisUnitVector1, axisUnitVector2);
 
+    /*
     float length1 = glm::length(axisUnitVector1);
     float length2 = glm::length(axisUnitVector2);
 
     float baseTriangleAngle_rad = std::acos(dotProduct / (length1 * length2));
     float baseTrinagleAngle_deg = glm::degrees(baseTriangleAngle_rad);
-
+    */
+    float baseTriangleAngle_rad = std::acos(dotProduct);
     // rad or deg?
-    return baseTriangleAngle_rad;
+    return baseTriangleAngle_rad; //w_ijk
 }
 
 const glm::vec3 Torus::getBasePlaneNormal(glm::vec3 atomPosition1, glm::vec3 atomPosition2, glm::vec3 atomPosition3) {
@@ -115,15 +130,17 @@ const glm::vec3 Torus::getBasePlaneNormal(glm::vec3 atomPosition1, glm::vec3 ato
     glm::vec3 basePlaneNormal = glm::cross(axisUnitVector1, axisUnitVector2_rotated);
     */
     glm::vec3 basePlaneNormal = glm::cross(axisUnitVector1, axisUnitVector2) / std::sin(angle);
-    return glm::normalize(basePlaneNormal);
+
+    return glm::normalize(basePlaneNormal); //u_ijk
 }
 
 const glm::vec3 Torus::getTorusBasePointUnitVector(glm::vec3 atomPosition1, glm::vec3 atomPosition2, glm::vec3 atomPosition3) {
     glm::vec3 basePlaneNormal = getBasePlaneNormal(atomPosition1, atomPosition2, atomPosition3);
-    glm::vec3 torusaxisUnitVector = getTorusAxisUnitVec(atomPosition1, atomPosition2);
+    glm::vec3 torusAxisUnitVector = getTorusAxisUnitVec(atomPosition1, atomPosition2);
 
-    glm::vec3 torusBasePointUnitVector = glm::cross(basePlaneNormal, torusaxisUnitVector);
-    return torusBasePointUnitVector;
+    glm::vec3 torusBasePointUnitVector = glm::cross(basePlaneNormal, torusAxisUnitVector);
+
+    return torusBasePointUnitVector; //u_tb
 }
 
 const glm::vec3 Torus::getBasePoint(glm::vec3 atomPosition1, glm::vec3 atomPosition2, glm::vec3 atomPosition3,
@@ -133,13 +150,75 @@ const glm::vec3 Torus::getBasePoint(glm::vec3 atomPosition1, glm::vec3 atomPosit
     glm::vec3 torusBasePointUnitVector = getTorusBasePointUnitVector(atomPosition1, atomPosition2, atomPosition3);
     glm::vec3 torusAxisUnitVector_13 = getTorusAxisUnitVec(atomPosition1, atomPosition3);
     float baseTriangleAngle = getBaseTriangleAngle(atomPosition1, atomPosition2, atomPosition3);
+    float angleFactor = 1 / baseTriangleAngle;
 
     glm::vec3 basePoint = torusCenter_12 +
-                          torusBasePointUnitVector * (torusAxisUnitVector_13);
+                          torusBasePointUnitVector *
+                          (glm::dot(torusAxisUnitVector_13,(torusCenter_13 - torusCenter_12))) *
+                          angleFactor;
 
-    return glm::vec3(0, 0, 0);
+    return basePoint; //b_ijk
 }
 
+const float Torus::getProbeHeight(glm::vec3 atomPosition1, glm::vec3 atomPosition2, glm::vec3 atomPosition3,
+                                  float atomRadius1, float atomRadius2, float atomRadius3, float probeRadius){
+    glm::vec3 basePoint = getBasePoint(atomPosition1, atomPosition2, atomPosition3, atomRadius1, atomRadius2, atomRadius3, probeRadius);
+
+    float radPow = powf(atomRadius1 + probeRadius, 2);
+    float pointPow = powf(glm::distance(basePoint, atomPosition1), 2);
+    float probeHeight = sqrtf(radPow - pointPow);
+
+    return probeHeight; //h_ijk
+};
+
+const glm::vec3 Torus::getProbePosition(glm::vec3 atomPosition1, glm::vec3 atomPosition2, glm::vec3 atomPosition3,
+                                        float atomRadius1, float atomRadius2, float atomRadius3, float probeRadius) {
+    //b_ijk, h_ijk, u_ijk
+    glm::vec3 basePoint = getBasePoint(atomPosition1, atomPosition2, atomPosition3, atomRadius1, atomRadius2, atomRadius3, probeRadius);
+    float probeHeight = getProbeHeight(atomPosition1, atomPosition2, atomPosition3, atomRadius1, atomRadius2, atomRadius3, probeRadius);
+    glm::vec3 basePlaneNormal = getBasePlaneNormal(atomPosition1, atomPosition2, atomPosition3);
+    //TODO
+    glm::vec3 probePosition = basePoint;
+
+    return probePosition; //p_ijk
+}
+
+const glm::vec3 Torus::getProbeVertex(glm::vec3 atomPosition1, glm::vec3 atomPosition2, glm::vec3 atomPosition3,
+                                      float atomRadius1, float atomRadius2, float atomRadius3, float probeRadius) {
+    glm::vec3 probePosition = getProbePosition(atomPosition1, atomPosition2, atomPosition3, atomRadius1, atomRadius2, atomRadius3, probeRadius);
+    glm::vec3 dividend = atomRadius1 * probePosition + probeRadius * atomPosition1;
+
+    glm::vec3 vertex = dividend / (atomRadius1 + probeRadius);
+
+    return vertex; //v_pi
+}
+
+const glm::vec3 Torus::getContactCircleCenter(glm::vec3 atomPosition1, glm::vec3 atomPosition2, float atomRadius1, float atomRadius2, float probeRadius) {
+    glm::vec3 torusCenter = getTorusCenter(atomPosition1, atomPosition2, atomRadius1, atomRadius2, probeRadius);
+    glm::vec3 dividend = atomRadius1 * torusCenter + probeRadius * atomPosition1;
+
+    glm::vec3 contactCircleCenter = dividend / (atomRadius1 + probeRadius);
+
+    return contactCircleCenter; //c_ij
+}
+
+const float Torus::getContactCircleRadius(glm::vec3 atomPosition1, glm::vec3 atomPosition2, float atomRadius1, float atomRadius2, float probeRadius) {
+    float distance = getDistance(atomPosition1, atomPosition2);
+    float torusRadius = getTorusRadius(atomRadius1, atomRadius2, probeRadius, distance);
+
+    float contactCircleRadius = (torusRadius * atomRadius1) / (atomRadius1 + probeRadius);
+
+    return contactCircleRadius; //r_c
+}
+
+const float Torus::getContactCircleDisplacement(glm::vec3 atomPosition1, glm::vec3 atomPosition2, float atomRadius1, float atomRadius2, float probeRadius) {
+    glm::vec3 torusAxisUnitVec = getTorusAxisUnitVec(atomPosition1, atomPosition2);
+    glm::vec3 contactCircleCenter = getContactCircleCenter(atomPosition1, atomPosition2, atomRadius1, atomRadius2, probeRadius);
+
+    float contactCirlceDisplacement = glm::dot(torusAxisUnitVec, (contactCircleCenter - atomPosition1));
+
+    return contactCirlceDisplacement;
+}
 
 
 const glm::vec3 Torus::rotateVector(float cosTheta, float sinTheta, glm::vec3 rotateVector, glm::vec3 rotateAxis) {

@@ -25,8 +25,16 @@ public:
         return (unsigned int)vertices.size() * sizeof(float);
     }
 
+      [[nodiscard]] unsigned int getVertexCount() const {
+        return (unsigned int)vertices.size();
+    }
+
     [[nodiscard]] unsigned int getNormalSize() const {
         return (unsigned int)normals.size() * sizeof(float);
+    }
+
+    [[nodiscard]] unsigned int getNormalCount() const {
+        return (unsigned int)normals.size();
     }
 
     [[nodiscard]] unsigned int getIndexSize() const {
@@ -35,6 +43,14 @@ public:
 
     [[nodiscard]] unsigned int getIndexCount() const {
         return (unsigned int)indices.size();
+    }
+
+    [[nodiscard]] unsigned int getLineIndicesSize() const {
+        return (unsigned int)lineIndices.size() * sizeof(unsigned int);
+    }
+
+    [[nodiscard]] unsigned int getLineIndicesCount() const {
+        return (unsigned int)lineIndices.size();
     }
 
     [[nodiscard]] const glm::vec3* getVertices() const {
@@ -57,6 +73,10 @@ public:
         return indices.data();
     }
 
+    const unsigned int* getLineIndices() const {
+        return lineIndices.data();
+    }
+
     static const float getDistance(glm::vec3 atomPosition1, glm::vec3 atomPosition2);
     static const glm::vec3 getTorusAxisUnitVec(glm::vec3 atomPosition1, glm::vec3 atomPosition2);
     static const glm::vec3 getTorusCenter(glm::vec3 atomPosition1, glm::vec3 atomPosition2, float atomRadius1, float atomRadius2, float probeRadius);
@@ -68,6 +88,16 @@ public:
     static const glm::vec3 getBasePoint(glm::vec3 atomPosition1, glm::vec3 atomPosition2, glm::vec3 atomPosition3,
                                         float atomRadius1, float atomRadius2, float atomRadius3, float probeRadius);
 
+    static const float getProbeHeight(glm::vec3 atomPosition1, glm::vec3 atomPosition2, glm::vec3 atomPosition3,
+                                      float atomRadius1, float atomRadius2, float atomRadius3, float probeRadius);
+    static const glm::vec3 getProbePosition(glm::vec3 atomPosition1, glm::vec3 atomPosition2, glm::vec3 atomPosition3,
+                                      float atomRadius1, float atomRadius2, float atomRadius3, float probeRadius);
+    static const glm::vec3 getProbeVertex(glm::vec3 atomPosition1, glm::vec3 atomPosition2, glm::vec3 atomPosition3,
+                                          float atomRadius1, float atomRadius2, float atomRadius3, float probeRadius);
+
+    static const glm::vec3 getContactCircleCenter(glm::vec3 atomPosition1, glm::vec3 atomPosition2, float atomRadius1, float atomRadius2, float probeRadius);
+    static const float getContactCircleRadius(glm::vec3 atomPosition1, glm::vec3 atomPosition2, float atomRadius1, float atomRadius2, float probeRadius);
+    static const float getContactCircleDisplacement(glm::vec3 atomPosition1, glm::vec3 atomPosition2, float atomRadius1, float atomRadius2, float probeRadius);
 
     std::vector<int> faceIndices;
 
@@ -81,6 +111,7 @@ private:
     std::vector<glm::vec3> vertices;
     std::vector<glm::vec3> normals;
     std::vector<unsigned int> indices;
+    std::vector<unsigned int> lineIndices;
 
     static const glm::vec3 rotateVector(float cosTheta, float sinTheta, glm::vec3 rotateVector, glm::vec3 rotateAxis);
 
