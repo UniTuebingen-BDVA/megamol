@@ -19,9 +19,17 @@ Torus::Torus(glm::vec3 center, float radius, int numSegments, int numRings)
 
 void Torus::generateTorus(float probeRadius) {
     float pi = M_PI;
+
+    // clear memory of prev arrays
+    std::vector<glm::vec3>().swap(vertices);
+    std::vector<glm::vec3>().swap(normals);
+    std::vector<unsigned int>().swap(indices);
+    std::vector<unsigned int>().swap(lineIndices);
+    std::vector<unsigned int>().swap(faceIndices);
+    int currentIndex = 0;
+
     for (int i = 0; i <= numRings; ++i) {
         for (int j = 0; j <= numSegments; ++j) {
-            //winkelpositionen der verticecs
             float theta = 2 * pi * static_cast<float>(j) / static_cast<float>(numSegments);
             float phi = 2 * pi * static_cast<float>(i) / static_cast<float>(numRings);
 
@@ -30,40 +38,30 @@ void Torus::generateTorus(float probeRadius) {
             float z = center.z + probeRadius * sin(phi);
 
 
-            // Füge den Vertex hinzu
             addVertex(x, y, z);
 
-            float scale = 1.0f / glm::length(glm::vec3(x, y, z));
-            float n1 = x * scale * -1;
-            float n2 = y * scale * -1;
-            float n3 = z * scale * -1;
-            addNormal(n1, n2, n3);
+            glm::vec3 normal = glm::normalize(glm::vec3(x - center.x, y - center.y, z - center.z));
+            addNormal(normal);
 
-            // Erster Punkt im Dreieck
-            addIndices(i * (numSegments + 1) + j + 1, (i + 1) * (numSegments + 1) + j, i * (numSegments + 1) + j);
+            indices.push_back(vertices.size() - 1);
 
-            // Zweiter Punkt im Dreieck
-            addIndices(i * (numSegments + 1) + j + 1, (i + 1) * (numSegments + 1) + j + 1, i * (numSegments + 1) + j + 1);
-            // Füge Linienindizes hinzu
-            lineIndices.push_back(i * (numSegments + 1) + j);
-            lineIndices.push_back(i * (numSegments + 1) + (j + 1));
+            lineIndices.push_back(indices.size() - 1);
+            lineIndices.push_back((indices.size() - 1 + numSegments) % (numRings * (numSegments + 1)));
+        }
+    }
 
-            lineIndices.push_back(i * (numSegments + 1) + j);
-            lineIndices.push_back((i + 1) * (numSegments + 1) + j);
-            
-            /*
-            unsigned int currentIndex = i * (numSegments + 1) + j;
-            faceIndices.push_back(currentIndex);
-            */
-            
-            faceIndices.push_back((numSegments + 1) * i + j);
-            faceIndices.push_back((numSegments + 1) * (i + 1) + j);
-            faceIndices.push_back((numSegments + 1) * i + j + 1);
+    for (int i = 0; i < numRings; ++i) {
+        for (int j = 0; j < numSegments; ++j) {
 
-            // Zweiter Punkt im Dreieck
-            faceIndices.push_back((numSegments + 1) * (i + 1) + j);
-            faceIndices.push_back((numSegments + 1) * (i + 1) + j + 1);
-            faceIndices.push_back((numSegments + 1) * i + j + 1);
+            //first
+            faceIndices.push_back(i * (numSegments + 1) + j);
+            faceIndices.push_back(i * (numSegments + 1) + (j + 1) % numSegments);
+            faceIndices.push_back((i + 1) * (numSegments + 1) + j);
+
+            //second
+            faceIndices.push_back((i + 1) * (numSegments + 1) + j);
+            faceIndices.push_back(i * (numSegments + 1) + (j + 1) % numSegments);
+            faceIndices.push_back((i + 1) * (numSegments + 1) + (j + 1) % numSegments);
             
         }
     }
@@ -233,8 +231,8 @@ void Torus::addVertex(float x, float y, float z) {
     vertices.push_back(glm::vec3(x, y, z));
 }
 
-void Torus::addNormal(float nx, float ny, float nz) {
-    normals.push_back(glm::vec3(nx, ny, nz));
+void Torus::addNormal(glm::vec3 normal) {
+    normals.push_back(normal);
 }
 
 void Torus::addIndices(unsigned int i1, unsigned int i2, unsigned int i3) {

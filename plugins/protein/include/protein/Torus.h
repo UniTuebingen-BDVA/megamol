@@ -53,6 +53,10 @@ public:
         return (unsigned int)lineIndices.size();
     }
 
+    [[nodiscard]] unsigned int getFaceIndicesCount() const {
+        return (unsigned int)faceIndices.size();
+    }
+
     [[nodiscard]] const glm::vec3* getVertices() const {
         if (vertices.empty()) {
             return nullptr;
@@ -99,7 +103,7 @@ public:
     static const float getContactCircleRadius(glm::vec3 atomPosition1, glm::vec3 atomPosition2, float atomRadius1, float atomRadius2, float probeRadius);
     static const float getContactCircleDisplacement(glm::vec3 atomPosition1, glm::vec3 atomPosition2, float atomRadius1, float atomRadius2, float probeRadius);
 
-    std::vector<int> faceIndices;
+    std::vector<unsigned int> faceIndices;
 
 private:
     glm::vec3 center;
@@ -116,7 +120,7 @@ private:
     static const glm::vec3 rotateVector(float cosTheta, float sinTheta, glm::vec3 rotateVector, glm::vec3 rotateAxis);
 
     void addVertex(float x, float y, float z);
-    void addNormal(float nx, float ny, float nz);
+    void addNormal(glm::vec3 normal);
     void addIndices(unsigned int i1, unsigned int i2, unsigned int i3);
 };
 

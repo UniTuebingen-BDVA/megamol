@@ -723,18 +723,26 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
             torusLineIndices.push_back(torus.getLineIndices()[i]);
         }
 
-        for (int i = 0; i < torus.getIndexCount(); i++) {
-            torusIndices.push_back(torus.getIndices()[i]);
-        }
-
-        for (int i = 0; i < torus.getLineIndicesCount(); i++) {
-            torusLineIndices.push_back(torus.getLineIndices()[i]);
-        }
-
-        for (int i = 0; i < torus.faceIndices.size(); i++) {
+        for (int i = 0; i < torus.getFaceIndicesCount(); i++) {
             torusFaceIndices.push_back(torus.faceIndices[i]);
         }
-        
+
+        std::cout << "torus.getVertexCount() = " << torus.getVertexCount() << std::endl;
+        std::cout << "torusVertices.size() = " << torusVertices.size() << std::endl;
+
+        std::cout << "torus.getNormalCount() = " << torus.getNormalCount() << std::endl;
+        std::cout << "torusNormals.size() = " << torusNormals.size() << std::endl;
+
+        std::cout << "torus.getIndexCount() = " << torus.getIndexCount() << std::endl;
+        std::cout << "torusIndices.size() = " << torusIndices.size() << std::endl;
+
+        std::cout << "torus.getLineIndicesCount() = " << torus.getLineIndicesCount() << std::endl;
+        std::cout << "torusLineIndices.size() = " << torusLineIndices.size() << std::endl;
+
+        std::cout << "torus.getFaceIndicesCount() = " << torus.getFaceIndicesCount() << std::endl;
+        std::cout << "torusFaceIndices.size() = " << torusFaceIndices.size() << std::endl;
+
+
         for (auto elem : torusVertices) {
             vertex.push_back(elem);
         }
@@ -746,7 +754,8 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
         for (auto elem : torusFaceIndices) {
             face.push_back(elem);
         }
-        
+
+        //std::cout << torusVertices.size() << std::endl;
 
         std::tuple<unsigned int, int> bla;
         bla = {1, 2};
