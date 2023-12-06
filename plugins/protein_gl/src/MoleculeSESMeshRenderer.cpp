@@ -904,7 +904,7 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
             unsigned int atomIndex1 = elem.first;
             unsigned int atomIndex2 = elem.second;
 
-            //probeRadius = 0.2f;
+            probeRadius = 0.6f;
 
             float atomRadius1 = mol->AtomTypes()[mol->AtomTypeIndices()[atomIndex1]].Radius();
             float atomRadius2 = mol->AtomTypes()[mol->AtomTypeIndices()[atomIndex2]].Radius();
@@ -917,7 +917,7 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
 
             float distance = Torus::getDistance(atomPos1, atomPos2);
             glm::vec3 center = Torus::getTorusCenter(atomPos1, atomPos2, atomRadius1, atomRadius2, probeRadius);
-            float radius = Torus::getTorusRadius(atomRadius1, atomRadius2, probeRadius, distance);
+            float radius = Torus::getTorusRadius(atomPos1, atomPos2, atomRadius1, atomRadius2, probeRadius);
             float rotationAngle = Torus::getRotationAngle(atomPos1, atomPos2);
             //std::cout << "center: " << center.x << "/" << center.y << "/" << center.z << std::endl;
 
@@ -927,7 +927,7 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
             Torus torus(center, radius, numSegments, numRings);
             torus.generateTorus(probeRadius, axisUnitVec, rotationAngle);
 
-            std::cout << probeRadius << std::endl;
+            std::cout << "radius: " << radius << std::endl;
 
 
             for (int i = 0; i < torus.getVertexCount(); i++) {
@@ -935,9 +935,9 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                 torusVertices.push_back(torus.getVertices()[i][1]);
                 torusVertices.push_back(torus.getVertices()[i][2]);
 
-                color.push_back(0.6f);
-                color.push_back(0.6f);
-                color.push_back(0.6f);
+                color.push_back(1.0f);
+                color.push_back(0.0f);
+                color.push_back(0.0f);
             }
 
             for (int i = 0; i < torus.getNormalCount(); i++) {

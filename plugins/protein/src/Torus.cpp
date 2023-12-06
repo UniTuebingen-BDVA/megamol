@@ -9,7 +9,7 @@
 #include <glm/glm.hpp>
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtx/string_cast.hpp"
-#include <glm/gtx/rotate_vector.hpp>
+#include "glm/gtx/rotate_vector.hpp"
 
 
 #ifndef M_PI
@@ -39,7 +39,7 @@ void Torus::generateTorus(float probeRadius, glm::vec3 axisUnitVec, float rotati
             float phi = 2 * pi * static_cast<float>(i) / static_cast<float>(numRings);
 
             float x = (/*2 + */radius + probeRadius * cos(phi)) * cos(theta);
-            float y = (/*2 + */ radius + probeRadius * cos(phi)) * sin(theta);
+            float y = (/*2 + */radius + probeRadius * cos(phi)) * sin(theta);
             float z = probeRadius * sin(phi);
 
             glm::vec3 vertex(x, y, z);
@@ -114,11 +114,14 @@ const glm::vec3 Torus::getTorusCenter(glm::vec3 atomPosition1, glm::vec3 atomPos
     return torusCenter; //t_ij
 }
 
-const float Torus::getTorusRadius(float atomRadius1, float atomRadius2, float probeRadius, float distance) {
-    float torusRadius = 0.5f * powf((powf((atomRadius1 + atomRadius2 + 2 * probeRadius), 0.5f) - powf(distance, 2)), 0.5f) *
-                        powf((powf(distance, 2) - powf((atomRadius1 - atomRadius2), 2)), 0.5f) / distance;
+const float Torus::getTorusRadius(glm::vec3 atomPos1, glm::vec3 atomPos2, float atomRadius1, float atomRadius2, float probeRadius) {
+    glm::vec3 vec1_2 = atomPos2 - atomPos1;
+    glm::vec3 normal = glm::normalize(glm::cross(vec1_2, glm::vec3(0, 0, 1)));
+    glm::vec3 intersecCenter = atomPos1 + 0.5f * vec1_2;
 
-    return torusRadius; //r_ij
+    float radius = glm::abs(glm::length(intersecCenter - atomPos1) - atomRadius1) + (probeRadius * 2);
+
+    return radius;
 }
 
 const float Torus::getBaseTriangleAngle(glm::vec3 atomPosition1, glm::vec3 atomPosition2, glm::vec3 atomPosition3) {
@@ -227,7 +230,7 @@ const glm::vec3 Torus::getContactCircleCenter(glm::vec3 atomPosition1, glm::vec3
 
 const float Torus::getContactCircleRadius(glm::vec3 atomPosition1, glm::vec3 atomPosition2, float atomRadius1, float atomRadius2, float probeRadius) {
     float distance = getDistance(atomPosition1, atomPosition2);
-    float torusRadius = getTorusRadius(atomRadius1, atomRadius2, probeRadius, distance);
+    float torusRadius = getTorusRadius(atomPosition1, atomPosition2, atomRadius1, atomRadius2, probeRadius);
 
     float contactCircleRadius = (torusRadius * atomRadius1) / (atomRadius1 + probeRadius);
 

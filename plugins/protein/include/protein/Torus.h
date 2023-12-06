@@ -84,8 +84,9 @@ public:
     static const float getDistance(glm::vec3 atomPosition1, glm::vec3 atomPosition2);
     static const glm::vec3 getTorusAxisUnitVec(glm::vec3 atomPosition1, glm::vec3 atomPosition2);
     static const glm::vec3 getTorusCenter(glm::vec3 atomPosition1, glm::vec3 atomPosition2, float atomRadius1, float atomRadius2, float probeRadius);
-    static const float getTorusRadius(float atomRadius1, float atomRadius2, float probeRadius, float distance);
     static const float getRotationAngle(glm::vec3 atomPosition1, glm::vec3 atomPosition2);
+    static const float getTorusRadius(glm::vec3 atomPos1, glm::vec3 atomPos2, float atomRadius1, float atomRadius2, float probeRadius);
+
 
     static const float getBaseTriangleAngle(glm::vec3 atomPosition1, glm::vec3 atomPosition2, glm::vec3 atomPosition3);
     static const glm::vec3 getBasePlaneNormal(glm::vec3 atomPosition1, glm::vec3 atomPosition2, glm::vec3 atomPosition3);
