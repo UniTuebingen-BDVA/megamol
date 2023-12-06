@@ -3,9 +3,14 @@
 #include <windows.h> // include windows.h to avoid thousands of compile errors even though this class is not depending on Windows
 #endif
 
+#include <iostream>
 #include "protein/Torus.h"
 #include <cmath>
 #include <glm/glm.hpp>
+#include "glm/gtc/matrix_transform.hpp"
+#include "glm/gtx/string_cast.hpp"
+#include <glm/gtx/rotate_vector.hpp>
+
 
 #ifndef M_PI
     #define M_PI 3.141592653589793238462643383279502884L
@@ -17,7 +22,7 @@ Torus::Torus(glm::vec3 center, float radius, int numSegments, int numRings)
         , numSegments(numSegments)
         , numRings(numRings) {}
 
-void Torus::generateTorus(float probeRadius) {
+void Torus::generateTorus(float probeRadius, glm::vec3 axisUnitVec, float rotationAngle) {
     float pi = M_PI;
 
     // clear memory of prev arrays
@@ -26,21 +31,23 @@ void Torus::generateTorus(float probeRadius) {
     std::vector<unsigned int>().swap(indices);
     std::vector<unsigned int>().swap(lineIndices);
     std::vector<unsigned int>().swap(faceIndices);
-    int currentIndex = 0;
+
 
     for (int i = 0; i <= numRings; ++i) {
         for (int j = 0; j <= numSegments; ++j) {
             float theta = 2 * pi * static_cast<float>(j) / static_cast<float>(numSegments);
             float phi = 2 * pi * static_cast<float>(i) / static_cast<float>(numRings);
 
-            float x = center.x + (radius + probeRadius * cos(phi)) * cos(theta);
-            float y = center.y + (radius + probeRadius * cos(phi)) * sin(theta);
-            float z = center.z + probeRadius * sin(phi);
+            float x = (/*2 + */radius + probeRadius * cos(phi)) * cos(theta);
+            float y = (/*2 + */ radius + probeRadius * cos(phi)) * sin(theta);
+            float z = probeRadius * sin(phi);
 
+            glm::vec3 vertex(x, y, z);
 
+            
             addVertex(x, y, z);
 
-            glm::vec3 normal = glm::normalize(glm::vec3(x - center.x, y - center.y, z - center.z));
+            glm::vec3 normal = glm::normalize(vertex);         
             addNormal(normal);
 
             indices.push_back(vertices.size() - 1);
@@ -48,6 +55,15 @@ void Torus::generateTorus(float probeRadius) {
             lineIndices.push_back(indices.size() - 1);
             lineIndices.push_back((indices.size() - 1 + numSegments) % (numRings * (numSegments + 1)));
         }
+    }
+
+
+    glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), center);
+    glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), rotationAngle, axisUnitVec);
+    glm::mat4 transformationMatrix = translationMatrix * rotationMatrix;
+    for (int i = 0; i < vertices.size(); ++i) {
+        glm::vec4 transformedVertex = transformationMatrix * glm::vec4(vertices[i], 1.0f);
+        vertices[i] = glm::vec3(transformedVertex);
     }
 
     for (int i = 0; i < numRings; ++i) {
@@ -74,10 +90,19 @@ const float Torus::getDistance(glm::vec3 atomPosition1, glm::vec3 atomPosition2)
 }
 
 const glm::vec3 Torus::getTorusAxisUnitVec(glm::vec3 atomPosition1, glm::vec3 atomPosition2) {
-    float distance = getDistance(atomPosition1, atomPosition2);
-    glm::vec3 axisUnitVec = (atomPosition2 - atomPosition2) / distance;
+    glm::vec3 cuttingPlaneNormal = glm::normalize(atomPosition2 - atomPosition1);
+    glm::vec3 referenceNormal = glm::vec3(0.0f, 0.0f, 1.0f);
+    glm::vec3 axisUnitVec = glm::normalize(glm::cross(referenceNormal, cuttingPlaneNormal));
 
     return axisUnitVec; //u_ij
+}
+
+const float Torus::getRotationAngle(glm::vec3 atomPosition1, glm::vec3 atomPosition2) {
+    glm::vec3 cuttingPlaneNormal = glm::normalize(atomPosition2 - atomPosition1);
+    glm::vec3 referenceNormal = glm::vec3(0.0f, 0.0f, 1.0f);
+    float rotationAngle = glm::acos(glm::dot(referenceNormal, cuttingPlaneNormal));
+
+    return rotationAngle;
 }
 
 const glm::vec3 Torus::getTorusCenter(glm::vec3 atomPosition1, glm::vec3 atomPosition2, float atomRadius1, float atomRadius2, float probeRadius) {

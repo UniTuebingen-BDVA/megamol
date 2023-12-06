@@ -11,7 +11,7 @@ public:
     explicit Torus(glm::vec3 center, float radius, int numSegments, int numRings);
     //~Torus() = default;
 
-    void generateTorus(float probeRadius);
+    void generateTorus(float probeRadius, glm::vec3 axisUnitVec, float rotationAngle);
 
     void setCenter(const glm::vec3& newCenter) {
         center = newCenter;
@@ -85,6 +85,7 @@ public:
     static const glm::vec3 getTorusAxisUnitVec(glm::vec3 atomPosition1, glm::vec3 atomPosition2);
     static const glm::vec3 getTorusCenter(glm::vec3 atomPosition1, glm::vec3 atomPosition2, float atomRadius1, float atomRadius2, float probeRadius);
     static const float getTorusRadius(float atomRadius1, float atomRadius2, float probeRadius, float distance);
+    static const float getRotationAngle(glm::vec3 atomPosition1, glm::vec3 atomPosition2);
 
     static const float getBaseTriangleAngle(glm::vec3 atomPosition1, glm::vec3 atomPosition2, glm::vec3 atomPosition3);
     static const glm::vec3 getBasePlaneNormal(glm::vec3 atomPosition1, glm::vec3 atomPosition2, glm::vec3 atomPosition3);
