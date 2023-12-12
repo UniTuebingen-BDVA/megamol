@@ -11,7 +11,7 @@ public:
     explicit Torus(glm::vec3 center, float radius, int numSegments, int numRings);
     //~Torus() = default;
 
-    void generateTorus(float probeRadius, glm::vec3 axisUnitVec, float rotationAngle);
+    void generateTorus(float probeRadius, glm::vec3 axisUnitVec, float rotationAngle, int offset, int foffset /*, int voffset, int foffset*/);
 
     void setCenter(const glm::vec3& newCenter) {
         center = newCenter;
@@ -79,6 +79,10 @@ public:
 
     const unsigned int* getLineIndices() const {
         return lineIndices.data();
+    }
+
+    const unsigned int* getFaceIndices() const {
+        return faceIndices.data();
     }
 
     static const float getDistance(glm::vec3 atomPosition1, glm::vec3 atomPosition2);

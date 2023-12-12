@@ -551,7 +551,7 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
 
     int atomCnt = mol->AtomCount();
     if(isDebug) {
-        atomCnt = 2;
+        atomCnt = 5;
     }
 
 
@@ -644,77 +644,10 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                     int atomIndex2 = j / ico->getVertexCount();
 
                     atomCollisions.insert({atomIndex1, atomIndex2});
-                    // check for triple collisions?
+                    
                 }
             }
         }
-        
-
-
-        
-
-        /*int numSegments = 50;
-        int numRings = 40;
-
-        for (int i = 0; i <= numRings; i++) {
-            for (int j = 0; j <= numSegments; j++) {
-                color.push_back(0.749f);
-                color.push_back(0.0f);
-                color.push_back(1.00f);
-            }
-        }
-        std::vector<float> torusVertices;
-        std::vector<float> torusNormals;
-        std::vector<unsigned int> torusIndices;
-        std::vector<unsigned int> torusLineIndices;
-        std::vector<unsigned int> torusFaceIndices;
-
-        Torus torus(glm::vec3(0, 0, 0), 2.8f, numSegments, numRings);
-        torus.generateTorus(probeRadius);
-
-        for (int i = 0; i < torus.getVertexCount(); i++) {
-            vertex.push_back(torus.getVertices()[i][0]);
-            vertex.push_back(torus.getVertices()[i][1]);
-            vertex.push_back(torus.getVertices()[i][2]);
-        }
-
-        for (int i = 0; i < torus.getNormalCount(); i++) {
-            normal.push_back(torus.getNormals()[i][0]);
-            normal.push_back(torus.getNormals()[i][1]);
-            normal.push_back(torus.getNormals()[i][2]);
-        }*/
-
-        /*for (int i = 0; i < torus.getIndexCount(); i++) {
-            torusIndices.push_back(torus.getIndices()[i]);
-        }
-
-        for (int i = 0; i < torus.getLineIndicesCount(); i++) {
-            torusLineIndices.push_back(torus.getLineIndices()[i]);
-        }*/
-
-        /*for (int i = 0; i < torus.getFaceIndicesCount(); i++) {
-            face.push_back(torus.faceIndices[i]);
-        }*/
-
-        /*std::cout << "torus.getVertexCount() = " << torus.getVertexCount() << std::endl;
-        std::cout << "torusVertices.size() = " << torusVertices.size() << std::endl;
-
-        std::cout << "torus.getNormalCount() = " << torus.getNormalCount() << std::endl;
-        std::cout << "torusNormals.size() = " << torusNormals.size() << std::endl;
-
-        std::cout << "torus.getIndexCount() = " << torus.getIndexCount() << std::endl;
-        std::cout << "torusIndices.size() = " << torusIndices.size() << std::endl;
-
-        std::cout << "torus.getLineIndicesCount() = " << torus.getLineIndicesCount() << std::endl;
-        std::cout << "torusLineIndices.size() = " << torusLineIndices.size() << std::endl;
-
-        std::cout << "torus.getFaceIndicesCount() = " << torus.getFaceIndicesCount() << std::endl;
-        std::cout << "torusFaceIndices.size() = " << torusFaceIndices.size() << std::endl;
-        */
-
-
-
-        //std::cout << torusVertices.size() << std::endl;
 
         std::tuple<unsigned int, int> bla;
         bla = {1, 2};
@@ -888,21 +821,36 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
         std::vector<unsigned int> torusLineIndices;
         std::vector<unsigned int> torusFaceIndices;
 
+        int highestIcosphereIndex = -1;
+
+        // Iteriere durch die Indizes der Icosphere-Vertizes und finde den höchsten Index
+        for (int i = 0; i < ico->getIndexCount(); ++i) {
+            highestIcosphereIndex = std::max(highestIcosphereIndex, static_cast<int>(ico->getIndices()[i]));
+        }
+
+        int torusVertexOffset = vertex.size() / 3;
+        int torusFaceOffset = face.size();
+        //int torusVertexOffset = highestIcosphereIndex + 1;
+
+        if (torusVertexOffset <= highestIcosphereIndex) {
+            torusVertexOffset = highestIcosphereIndex + /* torusVertexOffset +*/ 1;
+        }
+
+
         int numSegments = 30;
         int numRings = 20;
         for (auto elem : atomCollisions) {
 
-            int offset = vertex.size();
+            
 
-            for (int i = 0; i <= numRings; i++) {
-                for (int j = 0; j <= numSegments; j++) {
-                    /* color.push_back(0.6f);
-                     color.push_back(0.6f);
-                     color.push_back(0.6f);*/
-                }
-            }
+            //if (torusVertexOffset <= highestIcosphereIndex) {
+            //    torusVertexOffset = highestIcosphereIndex + /* torusVertexOffset +*/ 1;
+            //}
+
             unsigned int atomIndex1 = elem.first;
             unsigned int atomIndex2 = elem.second;
+
+            std::cout << atomIndex1 << "/" << atomIndex2 << std::endl;
 
             probeRadius = 0.6f;
 
@@ -925,25 +873,34 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
             std::cout << "axisUnitVec: " << axisUnitVec.x << "/" << axisUnitVec.y << "/" << axisUnitVec.z << std::endl;
 
             Torus torus(center, radius, numSegments, numRings);
-            torus.generateTorus(probeRadius, axisUnitVec, rotationAngle);
+            torus.generateTorus(probeRadius, axisUnitVec, rotationAngle, torusVertexOffset, torusFaceOffset);
 
             std::cout << "radius: " << radius << std::endl;
 
-
+            
             for (int i = 0; i < torus.getVertexCount(); i++) {
-                torusVertices.push_back(torus.getVertices()[i][0]);
+                /*torusVertices.push_back(torus.getVertices()[i][0]);
                 torusVertices.push_back(torus.getVertices()[i][1]);
-                torusVertices.push_back(torus.getVertices()[i][2]);
+                torusVertices.push_back(torus.getVertices()[i][2]);*/
+                vertex.push_back(torus.getVertices()[i][0]);
+                vertex.push_back(torus.getVertices()[i][1]);
+                vertex.push_back(torus.getVertices()[i][2]);
+                
+
+                std::cout << torus.getVertices()[i][0] << "/" << torus.getVertices()[i][1] << "/"
+                          << torus.getVertices()[i][2] << std::endl;
 
                 color.push_back(1.0f);
                 color.push_back(0.0f);
                 color.push_back(0.0f);
-            }
 
-            for (int i = 0; i < torus.getNormalCount(); i++) {
-                torusNormals.push_back(torus.getNormals()[i][0]);
+                /*torusNormals.push_back(torus.getNormals()[i][0]);
                 torusNormals.push_back(torus.getNormals()[i][1]);
-                torusNormals.push_back(torus.getNormals()[i][2]);
+                torusNormals.push_back(torus.getNormals()[i][2]);*/
+                normal.push_back(torus.getNormals()[i][0]);
+                normal.push_back(torus.getNormals()[i][1]);
+                normal.push_back(torus.getNormals()[i][2]);
+                
             }
 
             for (int i = 0; i < torus.getIndexCount(); i++) {
@@ -954,57 +911,16 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                 torusLineIndices.push_back(torus.getLineIndices()[i]);
             }
 
-            int highestIcosphereIndex = -1; 
-
-            // Iteriere durch die Indizes der Icosphere-Vertizes und finde den höchsten Index
-            for (int i = 0; i < ico->getIndexCount(); ++i) {
-                highestIcosphereIndex = std::max(highestIcosphereIndex, static_cast<int>(ico->getIndices()[i]));
-            }
-
-            int torusVertexOffset = vertex.size() / 3;
-
-            if (torusVertexOffset <= highestIcosphereIndex) {
-                torusVertexOffset = highestIcosphereIndex + /* torusVertexOffset +*/ 1;
-            }
-
-
             for (int i = 0; i < torus.getFaceIndicesCount(); i++) {
-                torusFaceIndices.push_back(torus.faceIndices[i]);
+                /*torusFaceIndices.push_back(torus.getFaceIndices()[i]);*/
+                face.push_back(torus.getFaceIndices()[i]);
+                std::cout << torus.getFaceIndices()[i] << std::endl;
             }
 
-            /*for (int i = 0; i < torus.getFaceIndicesCount(); i += 3) {
-                torusFaceIndices[i] += torusVertexOffset;
-                torusFaceIndices[i + 1] += torusVertexOffset;
-                torusFaceIndices[i + 2] += torusVertexOffset;
-            }*/
-
-            for (auto elem : torusVertices) {
-                vertex.push_back(elem);
-            }
-
-            for (auto elem : torusNormals) {
-                normal.push_back(elem);
-            }
-
-            for (auto elem : torusFaceIndices) {
-                face.push_back(elem + torusVertexOffset);
-            }
-
-            /*std::cout << "torus.getVertexCount() = " << torus.getVertexCount() << std::endl;
-            std::cout << "torusVertices.size() = " << torusVertices.size() << std::endl;*/
+            torusVertexOffset += torus.getVertexCount();
         }
 
-        //for (auto elem : torusVertices) {
-        //    vertex.push_back(elem);
-        //}
-
-        //for (auto elem : torusNormals) {
-        //    normal.push_back(elem);
-        //}
-
-        //for (auto elem : torusFaceIndices) {
-        //    face.push_back(elem);
-        //}
+        
         
     for (int atom = 0; atom < edgeVerticesPerAtom.size(); ++atom) {
         for (int vertices = 0; vertices < edgeVerticesPerAtom[atom].size(); vertices = vertices + 2) {
