@@ -5,6 +5,7 @@
 
 #include <glm/glm.hpp>
 #include <vector>
+#include <map>
 
 class Torus {
 public:
@@ -90,7 +91,13 @@ public:
     static const glm::vec3 getTorusCenter(glm::vec3 atomPosition1, glm::vec3 atomPosition2, float atomRadius1, float atomRadius2, float probeRadius);
     static const float getRotationAngle(glm::vec3 atomPosition1, glm::vec3 atomPosition2);
     static const float getTorusRadius(glm::vec3 atomPos1, glm::vec3 atomPos2, float atomRadius1, float atomRadius2, float probeRadius);
-
+    static const bool isTriangleInsideIco(glm::vec3 triangleCenter, const glm::vec3& atomPosition, float atomRadius);
+    void removeTriangles(const std::vector<unsigned int> trianglesToRemove, std::vector<glm::vec3>& vertices, std::vector<unsigned int>& faceIndices);
+    void removeTrianglesInsideSphere(glm::vec3 sphereCenter, float sphereRadius, std::vector<glm::vec3> vertices,
+        std::vector<glm::vec3> normals, std::vector<unsigned int> faceIndices);
+    void removeTrianglesInsideSphere2(glm::vec3 sphereCenter, float sphereRadius, std::vector<glm::vec3> vertices,
+        std::vector<glm::vec3> normals, std::vector<unsigned int> indices, std::vector<unsigned int> faceIndices);
+    static const bool isPointInsideIco(glm::vec3 atomPosition, float atomRadius, glm::vec3 point);
 
     static const float getBaseTriangleAngle(glm::vec3 atomPosition1, glm::vec3 atomPosition2, glm::vec3 atomPosition3);
     static const glm::vec3 getBasePlaneNormal(glm::vec3 atomPosition1, glm::vec3 atomPosition2, glm::vec3 atomPosition3);
@@ -109,7 +116,13 @@ public:
     static const float getContactCircleRadius(glm::vec3 atomPosition1, glm::vec3 atomPosition2, float atomRadius1, float atomRadius2, float probeRadius);
     static const float getContactCircleDisplacement(glm::vec3 atomPosition1, glm::vec3 atomPosition2, float atomRadius1, float atomRadius2, float probeRadius);
 
+    std::vector<glm::vec3> vertices;
+    std::vector<glm::vec3> normals;
+    std::vector<unsigned int> indices;
     std::vector<unsigned int> faceIndices;
+    std::map<int, int> vertexFaceIndices;
+    //std::vector<std::vector<int>> vertexFaceIndices;
+    std::map<unsigned int, std::vector<glm::vec3>> vertexFaceIndex;
 
 private:
     glm::vec3 center;
@@ -118,9 +131,7 @@ private:
     int numSegments;
     int numRings;
 
-    std::vector<glm::vec3> vertices;
-    std::vector<glm::vec3> normals;
-    std::vector<unsigned int> indices;
+    
     std::vector<unsigned int> lineIndices;
 
     static const glm::vec3 rotateVector(float cosTheta, float sinTheta, glm::vec3 rotateVector, glm::vec3 rotateAxis);
