@@ -22,7 +22,7 @@ Torus::Torus(glm::vec3 center, float radius, int numSegments, int numRings)
         , numSegments(numSegments)
         , numRings(numRings) {}
 
-void Torus::generateTorus(float probeRadius, glm::vec3 axisUnitVec, float rotationAngle, int offset, int foffset) {
+void Torus::generateTorus(float probeRadius, glm::vec3 axisUnitVec, float rotationAngle, int offset, int foffset, glm::vec3 atomPos1, glm::vec3 atomPos2, float atomRadius) {
     float pi = M_PI;
 
     // clear memory of prev arrays
@@ -32,66 +32,61 @@ void Torus::generateTorus(float probeRadius, glm::vec3 axisUnitVec, float rotati
     std::vector<unsigned int>().swap(lineIndices);
     std::vector<unsigned int>().swap(faceIndices);
 
+    //dummy point for visibility sphere
+    float theta = 2 * pi * static_cast<float>(0) / static_cast<float>(numSegments);
+    float phi = 2 * pi * static_cast<float>(0) / static_cast<float>(numRings);
+
+    float x = (radius + probeRadius * cos(phi)) * cos(theta);
+    float y = (radius + probeRadius * cos(phi)) * sin(theta);
+    float z = probeRadius * sin(phi);
+
+    //calculate visibility sphere
+    glm::vec3 probePos = getProbePos(center, radius, probeRadius, glm::vec3(x, y, z), rotationAngle, axisUnitVec);
+    glm::vec3 contactPoint = getContactPoint(probePos, atomPos1, atomRadius);
+    std::pair<glm::vec3, float> visibilitySphere = getVisibilitySphere(contactPoint, probePos, atomPos1, atomPos2, center);
+
 
     for (int i = 0; i <= numRings; ++i) {
         for (int j = 0; j <= numSegments; ++j) {
+            //calculate (x, y, z) still need to rotate
             float theta = 2 * pi * static_cast<float>(j) / static_cast<float>(numSegments);
             float phi = 2 * pi * static_cast<float>(i) / static_cast<float>(numRings);
 
-            float x = (/*2 + */ radius + probeRadius * cos(phi)) * cos(theta);
-            float y = (/*2 + */ radius + probeRadius * cos(phi)) * sin(theta);
+            float x = (radius + probeRadius * cos(phi)) * cos(theta);
+            float y = (radius + probeRadius * cos(phi)) * sin(theta);
             float z = probeRadius * sin(phi);
 
             glm::vec3 vertex(x, y, z);
-
-
             addVertex(x, y, z);
+
+            indices.push_back(vertices.size() - 1 + offset);
 
             glm::vec3 normal = glm::normalize(vertex);
             addNormal(normal);
 
-            indices.push_back(vertices.size() - 1 + offset);
+            /*
+            float distanceToVSCenter = glm::distance(visibilitySphere.first, vertex);
+            if (distanceToVSCenter <= visibilitySphere.second) {
+                addVertex(x, y, z);
+                //vertices_test.push_back(std::pair(glm::vec3(x, y, z), true));
+                glm::vec3 normal = glm::normalize(vertex);
+                addNormal(normal);
 
-            lineIndices.push_back(indices.size() - 1);
-            lineIndices.push_back((indices.size() - 1 + numSegments) % (numRings * (numSegments + 1)));
+                indices.push_back(vertices.size() - 1 + offset);
 
-            //if (i < numRings && j < numSegments) {
-            //    //point j on ring i
-            //    int v1 = i * (numSegments + 1) + j + offset;
-            //    //next point (j + 1) on ring i
-            //    int v2 = i * (numSegments + 1) + (j + 1) % numSegments + offset;
-            //    //point j on ring i + 1
-            //    int v3 = (i + 1) * (numSegments + 1) + j + offset;
-
-            //    // Fügen Sie die Face-Indices hinzu
-            //    faceIndices.push_back(v1);
-            //    faceIndices.push_back(v2);
-            //    faceIndices.push_back(v3);
-
-            //    vertexFaceIndex[v1] = glm::vec3(
-            //        vertices[(v1 - offset)], vertices[(v1 - offset) + 1], vertices[(v1 - offset) + 2]);
-            //    //std::cout << "offset: " << offset << std::endl;
-            //    std::cout << "value at " << v1 << " : " << vertexFaceIndex[v1].x << "/" << vertexFaceIndex[v1].y << "/"
-            //              << vertexFaceIndex[v1].z << std::endl;
-
-            //    //point j n ring i + 1
-            //    int v4 = (i + 1) * (numSegments + 1) + j + offset;
-            //    //next point on ring i
-            //    int v5 = i * (numSegments + 1) + (j + 1) % numSegments + offset;
-            //    //next point (j + 1) on ring i + 1
-            //    int v6 = (i + 1) * (numSegments + 1) + (j + 1) % numSegments + offset;
-
-            //    // Fügen Sie die Face-Indices hinzu
-            //    faceIndices.push_back(v4);
-            //    faceIndices.push_back(v5);
-            //    faceIndices.push_back(v6);
-
-
-            //}
+                lineIndices.push_back(indices.size() - 1);
+                lineIndices.push_back((indices.size() - 1 + numSegments) % (numRings * (numSegments + 1)));
+            } else {
+                addVertex(x, y, z);
+                //vertices_test.push_back(std::pair(glm::vec3(x, y, z), false));
+                glm::vec3 normal = glm::normalize(vertex);
+                addNormal(normal);
+            }
+            */
         }
     }
 
-
+    //transform torus
     glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), center);
     glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), rotationAngle, axisUnitVec);
     glm::mat4 transformationMatrix = translationMatrix * rotationMatrix;
@@ -100,10 +95,51 @@ void Torus::generateTorus(float probeRadius, glm::vec3 axisUnitVec, float rotati
         vertices[i] = glm::vec3(transformedVertex);
     }
 
+    //mark vertices inside the visibility sphere
+    for (int i = 0; i < vertices.size(); ++i) {
+        float distanceToVSCenter = glm::distance(visibilitySphere.first, vertices[i]);
+
+        if (distanceToVSCenter <= visibilitySphere.second) {
+            vertices_test.push_back(std::pair(vertices[i], true));
+        } else {
+            vertices_test.push_back(std::pair(vertices[i], false));
+        }
+    }
+
     std::cout << "vertices_size: " << vertices.size() << std::endl;
+
 
     for (int i = 0; i < numRings; ++i) {
         for (int j = 0; j < numSegments; ++j) {
+
+            int base = i * (numSegments + 1) + j;
+            int nextBase = ((i + 1) % numRings) * (numSegments + 1);
+
+            //four points for one rectangle => two triangles
+            //   O--- O
+            //   |  / |
+            //   | /  |
+            //   O----O
+            int v1 = base + offset;
+            int v2 = base + 1 + offset;
+            int v3 = nextBase + j + offset;
+            int v4 = nextBase + j + 1 + offset;
+
+            //if all three points of a triangle are inside of vs, save indices
+            if (vertices_test[v1 - offset].second && vertices_test[v2 - offset].second &&
+                vertices_test[v3 - offset].second) {
+                faceIndices.push_back(v1);
+                faceIndices.push_back(v2);
+                faceIndices.push_back(v3);
+            }
+            if (vertices_test[v2 - offset].second && vertices_test[v3 - offset].second &&
+                vertices_test[v4 - offset].second) {
+                faceIndices.push_back(v2);
+                faceIndices.push_back(v4);
+                faceIndices.push_back(v3);
+            }
+
+            /*
             //point j on ring i
             int v1 = i * (numSegments + 1) + j + offset;
             //next point (j + 1) on ring i
@@ -111,28 +147,32 @@ void Torus::generateTorus(float probeRadius, glm::vec3 axisUnitVec, float rotati
             //point j on ring i + 1
             int v3 = (i + 1) * (numSegments + 1) + j + offset;
 
-            // Fügen Sie die Face-Indices hinzu
-            faceIndices.push_back(v1);
-            faceIndices.push_back(v2);
-            faceIndices.push_back(v3);
+            bool in_v1 = std::find(indices.begin(), indices.end(), v1) != indices.end();
+            bool in_v2 = std::find(indices.begin(), indices.end(), v2) != indices.end();
+            bool in_v3 = std::find(indices.begin(), indices.end(), v3) != indices.end();
 
-            std::vector<glm::vec3> vertices_v1 = {vertices[(v1 - offset)], vertices[(v1 - offset) + 1], vertices[(v1 - offset) + 2]};
+            if (vertices_test[v1 - offset].second && vertices_test[v2 - offset].second && vertices_test[v3 - offset].second) {
+                    faceIndices.push_back(v1);
+                    faceIndices.push_back(v2);
+                    faceIndices.push_back(v3);
+            }
+            
+            std::vector<glm::vec3> vertices_v1 = {vertices[(v1 - offset) % vertices.size()],
+                                                    vertices[(v1 - offset + 1) % vertices.size()],
+                                                    vertices[(v1 - offset + 2) % vertices.size()]};
             vertexFaceIndex[v1] = vertices_v1;
 
-            std::vector<glm::vec3> vertices_v2 = {vertices[(v2 - offset)], vertices[(v2 - offset) + 1], vertices[(v2 - offset) + 2]};
+            std::vector<glm::vec3> vertices_v2 = {vertices[(v2 - offset) % vertices.size()],
+                                                    vertices[(v2 - offset + 1) % vertices.size()],
+                                                    vertices[(v2 - offset + 2) % vertices.size()]};
             vertexFaceIndex[v2] = vertices_v2;
 
-            std::vector<glm::vec3> vertices_v3;
-            if (v3 - offset + 2 == vertices.size()) {
-                vertices_v3 = {vertices[(v3 - offset)], vertices[(v3 - offset) + 1], vertices[0]};
-            } else {
-                vertices_v3 = {vertices[(v3 - offset)], vertices[(v3 - offset) + 1], vertices[(v3 - offset) + 2]};
-            }
+            std::vector<glm::vec3> vertices_v3 = {vertices[(v3 - offset) % vertices.size()],
+                                                    vertices[(v3 - offset + 1) % vertices.size()],
+                                                    vertices[(v3 - offset + 2) % vertices.size()]};
             vertexFaceIndex[v3] = vertices_v3;
-            //std::cout << v3 - offset << std::endl;
             
-
-            //point j n ring i + 1
+            //point j on ring i + 1
             int v4 = (i + 1) * (numSegments + 1) + j + offset;
             //next point on ring i
             int v5 = i * (numSegments + 1) + (j + 1) % numSegments + offset;
@@ -140,233 +180,123 @@ void Torus::generateTorus(float probeRadius, glm::vec3 axisUnitVec, float rotati
             int v6 = (i + 1) * (numSegments + 1) + (j + 1) % numSegments + offset;
 
             //std::cout << v5 - offset << std::endl;
+            bool in_v4 = std::find(indices.begin(), indices.end(), v4) != indices.end();
+            bool in_v5 = std::find(indices.begin(), indices.end(), v5) != indices.end();
+            bool in_v6 = std::find(indices.begin(), indices.end(), v6) != indices.end();
 
-            // Fügen Sie die Face-Indices hinzu
-            faceIndices.push_back(v4);
-            faceIndices.push_back(v5);
-            faceIndices.push_back(v6);
 
-            std::vector<glm::vec3> vertices_v4;
-            if (v4 - offset + 2 == vertices.size()) {
-                vertices_v4 = {vertices[(v4 - offset)], vertices[(v4 - offset) + 1], vertices[0]};
-            } else {
-                vertices_v4 = {vertices[(v4 - offset)], vertices[(v4 - offset) + 1], vertices[(v4 - offset) + 2]};
+
+            if (vertices_test[v4 - offset].second && vertices_test[v5 - offset].second && vertices_test[v6 - offset].second) {
+                    faceIndices.push_back(v4);
+                    faceIndices.push_back(v5);
+                    faceIndices.push_back(v6);
             }
+            
+            std::vector<glm::vec3> vertices_v4 = {vertices[(v4 - offset) % vertices.size()],
+                                                    vertices[(v4 - offset + 1) % vertices.size()],
+                                                    vertices[(v4 - offset + 2) % vertices.size()]};
             vertexFaceIndex[v4] = vertices_v4;
 
-            std::vector<glm::vec3> vertices_v5;
-            if (v5 - offset + 2 == vertices.size()) {
-                vertices_v5 = {vertices[(v5 - offset)], vertices[(v5 - offset) + 1], vertices[0]};
-            } else {
-                vertices_v5 = {vertices[(v5 - offset)], vertices[(v5 - offset) + 1], vertices[(v5 - offset) + 2]};
-            }
+            std::vector<glm::vec3> vertices_v5 = {vertices[(v5 - offset) % vertices.size()],
+                                                    vertices[(v5 - offset + 1) % vertices.size()],
+                                                    vertices[(v5 - offset + 2) % vertices.size()]};
             vertexFaceIndex[v5] = vertices_v5;
 
-            std::vector<glm::vec3> vertices_v6;
-            if (v6 - offset + 2 == vertices.size()) {
-                vertices_v6 = {vertices[(v6 - offset)], vertices[(v6 - offset) + 1], vertices[0]};
-            } else {
-                vertices_v6 = {vertices[(v6 - offset)], vertices[(v6 - offset) + 1], vertices[(v6 - offset) + 2]};
-            }
+            std::vector<glm::vec3> vertices_v6 = {vertices[(v6 - offset) % vertices.size()],
+                                                    vertices[(v6 - offset + 1) % vertices.size()],
+                                                    vertices[(v6 - offset + 2) % vertices.size()]};
             vertexFaceIndex[v6] = vertices_v6;
-            //std::cout << v6 - offset << std::endl;
-
-            /*std::cout << "value at " << v1 << " first: " << vertexFaceIndex[v1][0].x << "/" << vertexFaceIndex[v1][0].y << "/"
-                      << vertexFaceIndex[v1][0].z << std::endl;
-            std::cout << "value at " << v1 << " second: " << vertexFaceIndex[v1][1].x << "/" << vertexFaceIndex[v1][1].y
-                      << "/" << vertexFaceIndex[v1][1].z << std::endl;
-            std::cout << "value at " << v1 << " third: " << vertexFaceIndex[v1][2].x << "/" << vertexFaceIndex[v1][2].y
-                      << "/" << vertexFaceIndex[v1][2].z << std::endl;*/
+            */
         }
     }
+    std::cout << "FaceIndices: " << getFaceIndicesCount() << std::endl;
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+///// VISIBILITY SPHERE
+////////////////////////////////////////////////////////////////////////////////////////////////
+///// Interactive Visualization of Molecular Surface Dynamics (M. Krone, K. Bidmon, T. Ertl) (Fig. 7 Visibility Sphere)
+////////////////////////////////////////////////////////////////////////////////////////////////
+const glm::vec3 Torus::getProbePos(const glm::vec3& torusCenter, float torusRad, float probeRad, const glm::vec3& torusPoint, float rotationAngle, glm::vec3 axisUnitVec) {
+    //probe center on base plane, need to transform
+    glm::vec3 tubeCenter(0.0f, torusRad, 0.0f);
+
+    //same as torus transformationMatrix
+    glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), torusCenter);
+    glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), rotationAngle, axisUnitVec);
+    glm::mat4 transformationMatrix = translationMatrix * rotationMatrix;
+
+    //tranform probe center
+    glm::vec4 transformedTubeCenter = transformationMatrix * glm::vec4(tubeCenter, 1.0f);
+    glm::vec3 probePos = glm::vec3(transformedTubeCenter);
+    std::cout << "probePos: " << probePos.x << "/" << probePos.y << "/" << probePos.z << std::endl;
     
-    //for (int i = 0; i < numRings; ++i) {
-    //    for (int j = 0; j < numSegments; ++j) {
-
-    //        int v1 = i * (numSegments + 1) + j + offset;
-    //        int v2 = i * (numSegments + 1) + (j + 1) % numSegments + offset;
-    //        int v3 = (i + 1) * (numSegments + 1) + j + offset;
-
-    //        // Fügen Sie die Face-Indices hinzu
-    //        faceIndices.push_back(v1);
-    //        faceIndices.push_back(v2);
-    //        faceIndices.push_back(v3);
-
-    //        // Speichern Sie die Face-Indices für jedes Vertex
-    //        vertexFaceIndices[v1] = faceIndices.size() - 3;
-    //        vertexFaceIndices[v2] = faceIndices.size() - 2;
-    //        vertexFaceIndices[v3] = faceIndices.size() - 1;
-
-    //        int v4 = (i + 1) * (numSegments + 1) + j + offset;
-    //        int v5 = i * (numSegments + 1) + (j + 1) % numSegments + offset;
-    //        int v6 = (i + 1) * (numSegments + 1) + (j + 1) % numSegments + offset;
-
-    //        // Fügen Sie die Face-Indices hinzu
-    //        faceIndices.push_back(v4);
-    //        faceIndices.push_back(v5);
-    //        faceIndices.push_back(v6);
-
-    //        // Speichern Sie die Face-Indices für jedes Vertex
-    //        vertexFaceIndices[v4] = faceIndices.size() - 3;
-    //        vertexFaceIndices[v5] = faceIndices.size() - 2;
-    //        vertexFaceIndices[v6] = faceIndices.size() - 1;
-    //    
-    //        ////first
-    //        //faceIndices.push_back(i * (numSegments + 1) + j + offset);
-    //        //faceIndices.push_back(i * (numSegments + 1) + (j + 1) % numSegments + offset);
-    //        //faceIndices.push_back((i + 1) * (numSegments + 1) + j + offset);
-
-    //        ////second
-    //        //faceIndices.push_back((i + 1) * (numSegments + 1) + j + offset);
-    //        //faceIndices.push_back(i * (numSegments + 1) + (j + 1) % numSegments + offset);
-    //        //faceIndices.push_back((i + 1) * (numSegments + 1) + (j + 1) % numSegments + offset);
-    //    }
-    //}
-//}
-
-void Torus::removeTrianglesInsideSphere(glm::vec3 sphereCenter, float sphereRadius, std::vector<glm::vec3> vertices, std::vector<glm::vec3> normals, std::vector<unsigned int> faceIndices) {
-    std::vector<glm::vec3> newVertices;
-    std::vector<glm::vec3> newNormals;
-    std::vector<unsigned int> newIndices;
-
-    for (size_t i = 0; i < faceIndices.size(); i += 3) {
-        int v1Index = faceIndices[i];
-        int v2Index = faceIndices[i + 1];
-        int v3Index = faceIndices[i + 2];
-
-        // Check if indices are within valid range
-        if (v1Index < 0 || v1Index >= vertices.size() || v2Index < 0 || v2Index >= vertices.size() || v3Index < 0 ||
-            v3Index >= vertices.size()) {
-            // Invalid indices, mark this triangle as invalid
-            faceIndices[i] = faceIndices[i + 1] = faceIndices[i + 2] = -1;
-            continue;
-        }
-
-        glm::vec3 v1 = vertices[v1Index];
-        glm::vec3 v2 = vertices[v2Index];
-        glm::vec3 v3 = vertices[v3Index];
-
-        glm::vec3 triangleCenter = (v1 + v2 + v3) / 3.0f;
-
-        if (isTriangleInsideIco(triangleCenter, sphereCenter, sphereRadius)) {
-            // Triangle is inside the sphere, mark it as invalid
-            faceIndices[i] = faceIndices[i + 1] = faceIndices[i + 2] = -1;
-        }
-    }
-
-    // Remove invalid triangles from the vectors
-    newVertices.reserve(vertices.size());
-    newNormals.reserve(normals.size());
-    for (size_t i = 0; i < faceIndices.size(); ++i) {
-        int index = faceIndices[i];
-        if (index != -1) {
-            newVertices.push_back(vertices[index]);
-            newNormals.push_back(normals[index]);
-        }
-    }
-
-    // Update the Torus data with the new vectors
-    vertices = newVertices;
-    normals = newNormals;
+    return probePos;
 }
 
-void Torus::removeTrianglesInsideSphere2(glm::vec3 sphereCenter, float sphereRadius, std::vector<glm::vec3> vertices,
-    std::vector<glm::vec3> normals, std::vector<unsigned int> indices, std::vector<unsigned int> faceIndices) {
-    std::vector<glm::vec3> newVertices;
-    std::vector<glm::vec3> newNormals;
-    std::vector<unsigned int> newIndices;
+const glm::vec3 Torus::getContactPoint(const glm::vec3& probePos, glm::vec3 atomPos, float atomRad) {
+    //x = ((p - a_i) / (|p - a_i|)) * r_i
+    glm::vec3 temp = probePos - atomPos;
+    glm::vec3 tempNorm = glm::normalize(temp);
+    //std::cout << "probePos - atomPos = " << temp.x << "/" << temp.y << "/" << temp.z << std::endl;
+    float tempLength = glm::distance(probePos, atomPos);
+    //std::cout << "dist(probePos, atomPos) = " << tempLength << std::endl;
 
-    for (size_t i = 0; i < faceIndices.size(); i += 3) {
-        int v1Index = faceIndices[i];
-        int v2Index = faceIndices[i + 1];
-        int v3Index = faceIndices[i + 2];
+    //glm::vec3 contactPoint = (temp * atomRad) / tempLength;
+    glm::vec3 contactPoint = atomPos + tempNorm * atomRad;
+    std::cout << "contactPoint: " << contactPoint.x << "/" << contactPoint.y << "/" << contactPoint.z << std::endl;
 
-        // Check if indices are within valid range
-        if (v1Index < 0 || v1Index >= vertices.size() || v2Index < 0 || v2Index >= vertices.size() || v3Index < 0 ||
-            v3Index >= vertices.size()) {
-            continue; // Skip invalid indices
-        }
-
-        glm::vec3 v1 = vertices[v1Index];
-        glm::vec3 v2 = vertices[v2Index];
-        glm::vec3 v3 = vertices[v3Index];
-
-        glm::vec3 triangleCenter = (v1 + v2 + v3) / 3.0f;
-
-        if (!isTriangleInsideIco(triangleCenter, sphereCenter, sphereRadius)) {
-            // Triangle is not inside the sphere, keep it
-            newVertices.push_back(v1);
-            newVertices.push_back(v2);
-            newVertices.push_back(v3);
-
-            newNormals.push_back(normals[v1Index]);
-            newNormals.push_back(normals[v2Index]);
-            newNormals.push_back(normals[v3Index]);
-
-            // Adjust indices to match newVertices
-            int newIndexBase = static_cast<int>(newVertices.size()) - 3;
-            newIndices.push_back(newIndexBase);
-            newIndices.push_back(newIndexBase + 1);
-            newIndices.push_back(newIndexBase + 2);
-
-            // Update faceIndices to match newVertices
-            faceIndices[i] = newIndexBase;
-            faceIndices[i + 1] = newIndexBase + 1;
-            faceIndices[i + 2] = newIndexBase + 2;
-        }
-    }
-
-    // Update the Torus data with the new vectors
-    vertices = newVertices;
-    normals = newNormals;
-    indices = newIndices;
+    return contactPoint;
 }
 
-const bool Torus::isTriangleInsideIco(
-    glm::vec3 triangleCenter, const glm::vec3& atomPosition, float atomRadius) {
-    //glm::vec3 triangleCenter = (v1 + v2 + v3) / 3.0f;
+const std::pair<glm::vec3, float> Torus::getVisibilitySphere(glm::vec3 contactPoint, glm::vec3 probePos, glm::vec3 atomPos1, glm::vec3 atomPos2, glm::vec3 torusCenter) {
 
-    float distance = glm::length(triangleCenter - atomPosition);
+    //p = probePos (vec3)
+    glm::vec3 p = probePos;
+    //std::cout << "p = " << p.x << "/" << p.y << "/" << p.z << std::endl;
 
-    return distance < atomRadius;
+    //a_i = atomPos1 (vec3)
+    glm::vec3 a_i = atomPos1;
+    std::cout << "atomPos1 = " << a_i.x << "/" << a_i.y << "/" << a_i.z << std::endl;
+
+    //a_j = atomPos2 (vec3)
+    glm::vec3 a_j = atomPos2;
+    std::cout << "atomPos2 = " << a_j.x << "/" << a_j.y << "/" << a_j.z << std::endl;
+
+    //x = contactPoint (vec3)
+    glm::vec3 x = contactPoint;
+    //std::cout << "x = " << x.x << "/" << x.y << "/" << x.z << std::endl;
+
+    //t_ij = torusCenter (vec3)
+    glm::vec3 t_ij = torusCenter;
+    std::cout << "torusCenter = " << t_ij.x << "/" << t_ij.y << "/" << t_ij.z << std::endl;
+
+    //c' = (|p - a_i| / (|p - a_j| + |p - a_i|)) * (a_j - a_i) (vec3)
+    //-> added (+ a_i) 
+    glm::vec3 c_ = ((glm::distance(p, a_i) / (glm::distance(p, a_j) + glm::distance(p, a_i))) * (a_j - a_i)) + (a_i + a_j) * 0.5f;
+    //std::cout << "c' = " << c_.x << "/" << c_.y << "/" << c_.z << std::endl;
+
+    //r_vs = |x - c'| (float)
+    float r_vs = glm::distance(x, c_);
+
+    //c = (c' + a_i) - t_ij (vec3)
+    glm::vec3 c = (c_ + a_i) - t_ij;
+    std::cout << "vsCenter = " << c.x << "/" << c.y << "/" << c.z << std::endl;
+    std::cout << "vsRad = " << r_vs << std::endl;
+
+    std::pair<glm::vec3, float> visibilitySphere(c, r_vs);
+
+    return visibilitySphere;
 }
+////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////
 
-const bool Torus::isPointInsideIco(glm::vec3 atomPosition, float atomRadius, glm::vec3 point){
-    float distance = glm::distance(atomPosition, point);
-
-    return distance < atomRadius;
-}
-
-
-void Torus::removeTriangles(const std::vector<unsigned int> trianglesToRemove, std::vector<glm::vec3>& vertices,
-    std::vector<unsigned int>& faceIndices) {
-    std::vector<glm::vec3> newVertices;
-    std::vector<unsigned int> newFaceIndices;
-
-    for (size_t i = 0; i < faceIndices.size(); i += 3) {
-        unsigned int vertexIndex1 = faceIndices[i];
-        unsigned int vertexIndex2 = faceIndices[i + 1];
-        unsigned int vertexIndex3 = faceIndices[i + 2];
-
-        if (std::find(trianglesToRemove.begin(), trianglesToRemove.end(), vertexIndex1) == trianglesToRemove.end() &&
-            std::find(trianglesToRemove.begin(), trianglesToRemove.end(), vertexIndex2) == trianglesToRemove.end() &&
-            std::find(trianglesToRemove.begin(), trianglesToRemove.end(), vertexIndex3) == trianglesToRemove.end()) {
-
-            newVertices.push_back(vertices[vertexIndex1]);
-            newVertices.push_back(vertices[vertexIndex2]);
-            newVertices.push_back(vertices[vertexIndex3]);
-
-            newFaceIndices.push_back(newFaceIndices.size());
-            newFaceIndices.push_back(newFaceIndices.size() + 1);
-            newFaceIndices.push_back(newFaceIndices.size() + 2);
-        }
-    }
-
-    vertices = newVertices;
-    faceIndices = newFaceIndices;
-}
-
+////////////////////////////////////////////////////////////////////////////////////////////////
+///// BASIC TORUS CALCULATIONS
+////////////////////////////////////////////////////////////////////////////////////////////////
+///// Analytical Molecular Surface Calculation (M. L Connolly) (Surface definition equarions)
+////////////////////////////////////////////////////////////////////////////////////////////////
 const float Torus::getDistance(glm::vec3 atomPosition1, glm::vec3 atomPosition2) {
     float distance = glm::distance(atomPosition1, atomPosition2);
 
@@ -403,21 +333,44 @@ const glm::vec3 Torus::getTorusCenter(
 
 const float Torus::getTorusRadius(
     glm::vec3 atomPos1, glm::vec3 atomPos2, float atomRadius1, float atomRadius2, float probeRadius) {
-    glm::vec3 vec1_2 = atomPos2 - atomPos1;
-    glm::vec3 normal = glm::normalize(glm::cross(vec1_2, glm::vec3(0, 0, 1)));
-    glm::vec3 intersecCenter = atomPos1 + 0.5f * vec1_2;
 
-    float averageRadius = (atomRadius1 + atomRadius2) * 0.5f;
-    float radius = glm::abs(glm::length(intersecCenter - atomPos1) - atomRadius1) + probeRadius * 2;
+    /*
+    std::cout << "TorusRadiusCalc:" << std::endl;
+    std::cout << "AtomRad1: " << atomRadius1 << std::endl;
+    std::cout << "AtomRad2: " << atomRadius2 << std::endl;
+    std::cout << "AtomPos1: " << atomPos1.x << "/" << atomPos1.y << "/" << atomPos1.z << std::endl;
+    std::cout << "AtomPos2: " << atomPos2.x << "/" << atomPos2.y << "/" << atomPos2.z << std::endl;
+    std::cout << "ProbeRad: " << probeRadius << std::endl;
+    */
 
-    /*float part1 = std::powf(atomRadius1 + atomRadius2 + 2 * probeRadius, 2);
+    //(r_i + r_j + 2r_p)^2
+    float part1 = std::powf(atomRadius1 + atomRadius2 + (2 * probeRadius), 2);
+    //std::cout << "(r_i + r_j + 2r_p)^2 = " << part1 << std::endl;
+
+    //d_ij
     float part2 = glm::abs(glm::length(atomPos2 - atomPos1));
-    float part2sqr = std::powf(glm::abs(glm::length(atomPos2 - atomPos1)), 2);
-    float part12 = 1 / powf(part1 - part2sqr, 2);
-    float part3 = std::powf(atomRadius1 - atomRadius2, 2);
-    float part23 = 1 / std::powf(part2sqr - part3, 2);
+    //std::cout << "d_ij = " << part2 << std::endl;
 
-    float radius = 0.5f * part12 * part23 / part2;*/
+    //d_ij^2
+    float part2sqr = std::powf(/*glm::abs(glm::length(atomPos2 - atomPos1))*/ part2 , 2);
+    //std::cout << "d_ij^2 = " << part2sqr << std::endl;
+
+    //[(r_i + r_j + 2r_p)^2 - d_ij^2]^(1/2)
+    //float part12 = 1 / powf(part1 - part2sqr, 2);
+    float part12 = std::sqrtf(part1 - part2sqr);
+    //std::cout << "[(r_i + r_j + 2r_p)^2 - d_ij^2]^(1/2) = " << part12 << std::endl;
+
+    //(r_i - r_j)^2
+    float part3 = std::powf(std::abs(atomRadius1 - atomRadius2), 2);
+    //std::cout << "(r_i - r_j)^2 = " << part3 << std::endl;
+
+    //[d_ij^2 - (r_i - r_j)^2]^(1/2)
+    //float part23 = 1 / std::powf(part2sqr - part3, 2);
+    float part23 = std::sqrtf(part2sqr - part3);
+    //std::cout << "[d_ij^2 - (r_i - r_j)^2]^(1/2) = " << part23 << std::endl;
+
+    float radius = 0.5f * part12 * part23 / part2;
+    //std::cout << "radius: " << radius << std::endl;
 
     return radius;
 }
@@ -552,15 +505,26 @@ const float Torus::getContactCircleDisplacement(
 
     return contactCirlceDisplacement;
 }
+////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////
 
-
+////////////////////////////////////////////////////////////////////////////////////////////////
+///// HELPER CALCULATIONS
+////////////////////////////////////////////////////////////////////////////////////////////////
 const glm::vec3 Torus::rotateVector(float cosTheta, float sinTheta, glm::vec3 rotateVector, glm::vec3 rotateAxis) {
     glm::vec3 rotatedVec = cosTheta * rotateVector + sinTheta + glm::cross(rotateAxis, rotateVector) +
                            (1 - cosTheta) * glm::dot(rotateAxis, rotateVector) * rotateAxis;
 
     return rotatedVec;
 }
+////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////
 
+////////////////////////////////////////////////////////////////////////////////////////////////
+///// ADD FUNCTIONS
+////////////////////////////////////////////////////////////////////////////////////////////////
 void Torus::addVertex(float x, float y, float z) {
     vertices.push_back(glm::vec3(x, y, z));
 }
@@ -574,3 +538,6 @@ void Torus::addIndices(unsigned int i1, unsigned int i2, unsigned int i3) {
     indices.push_back(i2);
     indices.push_back(i3);
 }
+////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////

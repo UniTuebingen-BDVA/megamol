@@ -100,6 +100,9 @@ public:
     };
     std::set<std::pair<unsigned int, unsigned int>, PairComparator> atomCollisions;
 
+    void pvec3(glm::vec3 point) {
+        std::cout << point.x << "/" << point.y << "/" << point.z << std::endl;
+    }
 
 protected:
     /**

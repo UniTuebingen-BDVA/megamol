@@ -12,7 +12,7 @@ public:
     explicit Torus(glm::vec3 center, float radius, int numSegments, int numRings);
     //~Torus() = default;
 
-    void generateTorus(float probeRadius, glm::vec3 axisUnitVec, float rotationAngle, int offset, int foffset /*, int voffset, int foffset*/);
+    void generateTorus(float probeRadius, glm::vec3 axisUnitVec, float rotationAngle, int offset, int foffset, glm::vec3 atomPos1, glm::vec3 atomPos2, float atomRadius);
 
     void setCenter(const glm::vec3& newCenter) {
         center = newCenter;
@@ -59,10 +59,28 @@ public:
     }
 
     [[nodiscard]] const glm::vec3* getVertices() const {
+        /*std::vector<glm::vec3> temp;
+        for (auto elem : vertices_test) {
+            temp.push_back(elem.first);
+        }*/
         if (vertices.empty()) {
             return nullptr;
         } else {
+            //return &temp[0];
             return &vertices[0];
+        }
+    }
+
+    [[nodiscard]] const bool getVertices_bool(int i) const {
+        std::vector<bool> temp;
+        for (auto elem : vertices_test) {
+            temp.push_back(elem.second);
+        }
+        if (vertices.empty()) {
+            return false;
+        } else {
+            return temp[i];
+            //return &vertices[0];
         }
     }
 
@@ -86,18 +104,17 @@ public:
         return faceIndices.data();
     }
 
+    static const glm::vec3 getContactPoint(const glm::vec3& probePos, glm::vec3 atomPos, float atomRad);
+    static const glm::vec3 getProbePos(const glm::vec3& torusCenter, float torusRad, float probeRad,
+                                       const glm::vec3& torusPoint, float rotationAngle, glm::vec3 axisUnitVec);
+    static const std::pair<glm::vec3, float> getVisibilitySphere(glm::vec3 contactPoint, glm::vec3 probePos, glm::vec3 atomPos1, glm::vec3 atomPos2, glm::vec3 torusCenter);
+
+
     static const float getDistance(glm::vec3 atomPosition1, glm::vec3 atomPosition2);
     static const glm::vec3 getTorusAxisUnitVec(glm::vec3 atomPosition1, glm::vec3 atomPosition2);
     static const glm::vec3 getTorusCenter(glm::vec3 atomPosition1, glm::vec3 atomPosition2, float atomRadius1, float atomRadius2, float probeRadius);
     static const float getRotationAngle(glm::vec3 atomPosition1, glm::vec3 atomPosition2);
     static const float getTorusRadius(glm::vec3 atomPos1, glm::vec3 atomPos2, float atomRadius1, float atomRadius2, float probeRadius);
-    static const bool isTriangleInsideIco(glm::vec3 triangleCenter, const glm::vec3& atomPosition, float atomRadius);
-    void removeTriangles(const std::vector<unsigned int> trianglesToRemove, std::vector<glm::vec3>& vertices, std::vector<unsigned int>& faceIndices);
-    void removeTrianglesInsideSphere(glm::vec3 sphereCenter, float sphereRadius, std::vector<glm::vec3> vertices,
-        std::vector<glm::vec3> normals, std::vector<unsigned int> faceIndices);
-    void removeTrianglesInsideSphere2(glm::vec3 sphereCenter, float sphereRadius, std::vector<glm::vec3> vertices,
-        std::vector<glm::vec3> normals, std::vector<unsigned int> indices, std::vector<unsigned int> faceIndices);
-    static const bool isPointInsideIco(glm::vec3 atomPosition, float atomRadius, glm::vec3 point);
 
     static const float getBaseTriangleAngle(glm::vec3 atomPosition1, glm::vec3 atomPosition2, glm::vec3 atomPosition3);
     static const glm::vec3 getBasePlaneNormal(glm::vec3 atomPosition1, glm::vec3 atomPosition2, glm::vec3 atomPosition3);
@@ -117,11 +134,11 @@ public:
     static const float getContactCircleDisplacement(glm::vec3 atomPosition1, glm::vec3 atomPosition2, float atomRadius1, float atomRadius2, float probeRadius);
 
     std::vector<glm::vec3> vertices;
+    std::vector<std::pair<glm::vec3, bool>> vertices_test;
     std::vector<glm::vec3> normals;
     std::vector<unsigned int> indices;
     std::vector<unsigned int> faceIndices;
     std::map<int, int> vertexFaceIndices;
-    //std::vector<std::vector<int>> vertexFaceIndices;
     std::map<unsigned int, std::vector<glm::vec3>> vertexFaceIndex;
 
 private:

@@ -52,6 +52,11 @@ using namespace megamol::protein_calls;
 using namespace megamol::protein_gl;
 using namespace megamol::core::utility::log;
 
+#ifndef M_PI
+#define M_PI 3.141592653589793238462643383279502884L
+#endif
+float pi = M_PI;
+
 /*
  * MoleculeSESMeshRenderer::MoleculeSESMeshRenderer
  */
@@ -551,7 +556,7 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
 
     int atomCnt = mol->AtomCount();
     if(isDebug) {
-        atomCnt = 3;
+        atomCnt = 2;
     }
 
 
@@ -832,21 +837,20 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
             highestIcosphereIndex = std::max(highestIcosphereIndex, static_cast<int>(ico->getIndices()[i]));
         }
 
+        //offset for torus vertices
         int offset = vertex.size() / 3;
         int torusFaceOffset = face.size();
-        //int torusVertexOffset = highestIcosphereIndex + 1;
 
         if (offset <= highestIcosphereIndex) {
-            offset = highestIcosphereIndex + /* torusVertexOffset +*/ 1;
+            offset = highestIcosphereIndex + 1;
         }
 
-
+        //set subdivision for torus
         int numSegments = 30;
         int numRings = 20;
+
+        //generate torus for every colliding atom pair
         for (auto elem : atomCollisions) {
-
-            
-
             //if (torusVertexOffset <= highestIcosphereIndex) {
             //    torusVertexOffset = highestIcosphereIndex + /* torusVertexOffset +*/ 1;
             //}
@@ -854,9 +858,7 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
             unsigned int atomIndex1 = elem.first;
             unsigned int atomIndex2 = elem.second;
 
-            std::cout << atomIndex1 << "/" << atomIndex2 << std::endl;
-
-            probeRadius = 0.6f;
+            std::cout << "Atompaar: " << atomIndex1 << "/" << atomIndex2 << std::endl;
 
             float atomRadius1 = mol->AtomTypes()[mol->AtomTypeIndices()[atomIndex1]].Radius();
             float atomRadius2 = mol->AtomTypes()[mol->AtomTypeIndices()[atomIndex2]].Radius();
@@ -867,135 +869,54 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
             glm::vec3 atomPos2(mol->AtomPositions()[3 * atomIndex2 + 0], mol->AtomPositions()[3 * atomIndex2 + 1],
                 mol->AtomPositions()[3 * atomIndex2 + 2]);
 
+            //values for torus generation
             float distance = Torus::getDistance(atomPos1, atomPos2);
             glm::vec3 center = Torus::getTorusCenter(atomPos1, atomPos2, atomRadius1, atomRadius2, probeRadius);
             float radius = Torus::getTorusRadius(atomPos1, atomPos2, atomRadius1, atomRadius2, probeRadius);
             float rotationAngle = Torus::getRotationAngle(atomPos1, atomPos2);
-            //std::cout << "center: " << center.x << "/" << center.y << "/" << center.z << std::endl;
-
             glm::vec3 axisUnitVec = Torus::getTorusAxisUnitVec(atomPos1, atomPos2);
-            std::cout << "axisUnitVec: " << axisUnitVec.x << "/" << axisUnitVec.y << "/" << axisUnitVec.z << std::endl;
+            //std::cout << "center: " << center.x << "/" << center.y << "/" << center.z << std::endl;
+            //std::cout << "axisUnitVec: " << axisUnitVec.x << "/" << axisUnitVec.y << "/" << axisUnitVec.z << std::endl;
 
+            //torus generation
             Torus torus(center, radius, numSegments, numRings);
-            torus.generateTorus(probeRadius, axisUnitVec, rotationAngle, offset, torusFaceOffset);
+            torus.generateTorus(probeRadius, axisUnitVec, rotationAngle, offset, torusFaceOffset, atomPos1, atomPos2, atomRadius1);
 
-            std::cout << "radius: " << radius << std::endl;
-
-            for (int i = 0; i < atomCnt; ++i) {
-                glm::vec3 atomPosition(mol->AtomPositions()[3 * i + 0], mol->AtomPositions()[3 * i + 1], mol->AtomPositions()[3 * i + 2]);
-                float atomRadius = mol->AtomTypes()[mol->AtomTypeIndices()[i]].Radius();
-
-                for (auto elem : torus.vertexFaceIndex) {
-                    bool first = torus.isPointInsideIco(atomPosition, atomRadius, elem.second[0]);
-                    std::cout << first << std::endl;
-                }
-
-                //for (size_t i = 0; i < torus.faceIndices.size(); ++i) {
-                //    unsigned int elem = torus.faceIndices[i] - offset;
-
-                //    bool first_point_inside = torus.isPointInsideIco(atomPosition, atomRadius, torus.vertexFaceIndex[elem][0]);
-                //    bool second_point_inside = torus.isPointInsideIco(atomPosition, atomRadius, torus.vertexFaceIndex[elem][1]);
-                //    bool third_point_inside = torus.isPointInsideIco(atomPosition, atomRadius, torus.vertexFaceIndex[elem][2]);
-
-                //    if (first_point_inside || second_point_inside || third_point_inside) {
-                //        torus.faceIndices[i] = -1;
-                //    }
-                //    //std::cout << elem - offset << std::endl;
-                //}
-            }
-            /*for (auto elem : torus.vertexFaceIndex) {
-                std::cout << elem.first << std::endl;
-            }*/
-
-            //for (int i = 0; i < atomCnt; ++i) {
-            //    glm::vec3 atomPosition(mol->AtomPositions()[3 * i + 0],
-            //        mol->AtomPositions()[3 * i + 1], mol->AtomPositions()[3 * i + 2]);
-            //    float atomRadius = mol->AtomTypes()[mol->AtomTypeIndices()[i]].Radius();
-            //    //torus.removeTrianglesInsideSphere(atomPosition, atomRadius, torus.vertices, torus.normals, torus.faceIndices);
-            //    torus.removeTrianglesInsideSphere2(atomPosition, atomRadius, torus.vertices, torus.normals, torus.indices, torus.faceIndices);
-
-            //}
-
-
-            /*std::vector<glm::vec3> updatedVertices;
-            std::vector<unsigned int> updatedIndices;*/
-            /*
-                Prüfen, ob 1/2/3 vertex innerhalb Atom, wenn ja => raus
-                ODER
-                Prüfen, ob Zentrum von Dreieck innnerhalb Atom, wenn ja => raus
-            */
-
-
-
-            //for (int i = 0; i < torus.faceIndices.size(); i += 3) {
-            //    if (i + 2 < torus.faceIndices.size()) {
-            //        int v1Index = torus.faceIndices[i + 0];
-            //        int v2Index = torus.faceIndices[i + 1];
-            //        int v3Index = torus.faceIndices[i + 2];
-
-            //        // Extrahieren Sie die Face-Indices für jedes Vertex aus der Map
-            //        const int& v1FaceIndices = torus.vertexFaceIndices[v1Index];
-            //        const int& v2FaceIndices = torus.vertexFaceIndices[v2Index];
-            //        const int& v3FaceIndices = torus.vertexFaceIndices[v3Index];
-
-            //        glm::vec3 v1 = torus.vertices[v1FaceIndices];
-            //        glm::vec3 v2 = torus.vertices[v2FaceIndices];
-            //        glm::vec3 v3 = torus.vertices[v3FaceIndices];
-
-            //        // Überprüfen Sie, ob das Dreieck innerhalb eines Atoms liegt
-            //        if (!torus.isTriangleInsideIco(v1, v2, v3, atomPos1, atomRadius1)) {
-            //            // Fügen Sie die aktualisierten Vertices und Indices hinzu, wenn das Dreieck nicht entfernt werden soll
-            //            updatedVertices.push_back(torus.vertices[v1FaceIndices]);
-            //            updatedVertices.push_back(torus.vertices[v2FaceIndices]);
-            //            updatedVertices.push_back(torus.vertices[v3FaceIndices]);
-
-            //            updatedIndices.push_back(updatedVertices.size() - 3);
-            //            updatedIndices.push_back(updatedVertices.size() - 2);
-            //            updatedIndices.push_back(updatedVertices.size() - 1);
-            //        }
-            //    }
-            //}
-            /*std::cout << "verticesSize = " << torus.vertices.size() << std::endl;
-
-            std::cout << "faceIndexSize = " << torus.faceIndices.size() << std::endl;*/
-            // Aktualisieren Sie den ursprünglichen Vektor mit den aktualisierten Werten
-            /*torus.vertices = updatedVertices;
-            torus.indices = updatedIndices;*/
-            
+            //add generated vertices to global vertex structure
+            int acceptedVertices = 0;
             for (int i = 0; i < torus.getVertexCount(); i++) {
-                /*torusVertices.push_back(torus.getVertices()[i][0]);
-                torusVertices.push_back(torus.getVertices()[i][1]);
-                torusVertices.push_back(torus.getVertices()[i][2]);*/
-                vertex.push_back(torus.getVertices()[i][0]);
-                vertex.push_back(torus.getVertices()[i][1]);
-                vertex.push_back(torus.getVertices()[i][2]);
-
-                color.push_back(1.0f);
-                color.push_back(0.0f);
-                color.push_back(0.0f);
-
-                /*torusNormals.push_back(torus.getNormals()[i][0]);
-                torusNormals.push_back(torus.getNormals()[i][1]);
-                torusNormals.push_back(torus.getNormals()[i][2]);*/
-                normal.push_back(torus.getNormals()[i][0]);
-                normal.push_back(torus.getNormals()[i][1]);
-                normal.push_back(torus.getNormals()[i][2]);
-                
+                //only add vertex, color and normal if vertex is inside visibility sphere
+                if (torus.getVertices_bool(i) == true) {
+                    vertex.push_back(torus.getVertices()[i][0]);
+                    vertex.push_back(torus.getVertices()[i][1]);
+                    vertex.push_back(torus.getVertices()[i][2]);
+                    color.push_back(1.0f);
+                    color.push_back(0.0f);
+                    color.push_back(0.0f);
+                    normal.push_back(torus.getNormals()[i][0]);
+                    normal.push_back(torus.getNormals()[i][1]);
+                    normal.push_back(torus.getNormals()[i][2]);
+                    acceptedVertices++;
+                }                
             }
+            std::cout << "Accepted vertices: " << acceptedVertices << std::endl;
 
+            //not necessary
             for (int i = 0; i < torus.getIndexCount(); i++) {
                 torusIndices.push_back(torus.getIndices()[i]);
             }
 
+            //not necessary
             for (int i = 0; i < torus.getLineIndicesCount(); i++) {
                 torusLineIndices.push_back(torus.getLineIndices()[i]);
             }
 
+            //add generated face indices to global face index structure
             for (int i = 0; i < torus.getFaceIndicesCount(); i++) {
-                /*torusFaceIndices.push_back(torus.getFaceIndices()[i]);*/
                 face.push_back(torus.getFaceIndices()[i]);
             }
 
+            //update offset
             offset += torus.getVertexCount();
         }
 
