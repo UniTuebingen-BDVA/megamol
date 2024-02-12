@@ -897,7 +897,17 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                     normal.push_back(torus.getNormals()[i][1]);
                     normal.push_back(torus.getNormals()[i][2]);
                     acceptedVertices++;
-                }                
+                } else {
+                    vertex.push_back(torus.getVertices()[i][0]);
+                    vertex.push_back(torus.getVertices()[i][1]);
+                    vertex.push_back(torus.getVertices()[i][2]);
+                    color.push_back(0.0f);
+                    color.push_back(1.0f);
+                    color.push_back(0.0f);
+                    normal.push_back(torus.getNormals()[i][0]);
+                    normal.push_back(torus.getNormals()[i][1]);
+                    normal.push_back(torus.getNormals()[i][2]);
+                }         
             }
             std::cout << "Accepted vertices: " << acceptedVertices << std::endl;
 

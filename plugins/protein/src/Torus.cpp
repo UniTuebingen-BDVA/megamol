@@ -111,7 +111,75 @@ void Torus::generateTorus(float probeRadius, glm::vec3 axisUnitVec, float rotati
 
     for (int i = 0; i < numRings; ++i) {
         for (int j = 0; j < numSegments; ++j) {
+            
+            //point j on ring i
+            int v1 = i * (numSegments + 1) + j + offset;
+            //next point (j + 1) on ring i
+            int v2 = i * (numSegments + 1) + (j + 1) % numSegments + offset;
+            //point j on ring i + 1
+            int v3 = (i + 1) * (numSegments + 1) + j + offset;
 
+            bool in_v1 = std::find(indices.begin(), indices.end(), v1) != indices.end();
+            bool in_v2 = std::find(indices.begin(), indices.end(), v2) != indices.end();
+            bool in_v3 = std::find(indices.begin(), indices.end(), v3) != indices.end();
+
+            if (vertices_test[v1 - offset].second && vertices_test[v2 - offset].second && vertices_test[v3 - offset].second) {
+                    faceIndices.push_back(v3);
+                    faceIndices.push_back(v2);
+                    faceIndices.push_back(v1);
+            }
+
+            std::vector<glm::vec3> vertices_v1 = {vertices[(v1 - offset) % vertices.size()],
+                                                    vertices[(v1 - offset + 1) % vertices.size()],
+                                                    vertices[(v1 - offset + 2) % vertices.size()]};
+            vertexFaceIndex[v1] = vertices_v1;
+
+            std::vector<glm::vec3> vertices_v2 = {vertices[(v2 - offset) % vertices.size()],
+                                                    vertices[(v2 - offset + 1) % vertices.size()],
+                                                    vertices[(v2 - offset + 2) % vertices.size()]};
+            vertexFaceIndex[v2] = vertices_v2;
+
+            std::vector<glm::vec3> vertices_v3 = {vertices[(v3 - offset) % vertices.size()],
+                                                    vertices[(v3 - offset + 1) % vertices.size()],
+                                                    vertices[(v3 - offset + 2) % vertices.size()]};
+            vertexFaceIndex[v3] = vertices_v3;
+
+            //point j on ring i + 1
+            int v4 = (i + 1) * (numSegments + 1) + j + offset;
+            //next point on ring i
+            int v5 = i * (numSegments + 1) + (j + 1) % numSegments + offset;
+            //next point (j + 1) on ring i + 1
+            int v6 = (i + 1) * (numSegments + 1) + (j + 1) % numSegments + offset;
+
+            //std::cout << v5 - offset << std::endl;
+            bool in_v4 = std::find(indices.begin(), indices.end(), v4) != indices.end();
+            bool in_v5 = std::find(indices.begin(), indices.end(), v5) != indices.end();
+            bool in_v6 = std::find(indices.begin(), indices.end(), v6) != indices.end();
+
+
+
+            if (vertices_test[v4 - offset].second && vertices_test[v5 - offset].second && vertices_test[v6 - offset].second) {
+                    faceIndices.push_back(v6);
+                    faceIndices.push_back(v5);
+                    faceIndices.push_back(v4);
+            }
+
+            std::vector<glm::vec3> vertices_v4 = {vertices[(v4 - offset) % vertices.size()],
+                                                    vertices[(v4 - offset + 1) % vertices.size()],
+                                                    vertices[(v4 - offset + 2) % vertices.size()]};
+            vertexFaceIndex[v4] = vertices_v4;
+
+            std::vector<glm::vec3> vertices_v5 = {vertices[(v5 - offset) % vertices.size()],
+                                                    vertices[(v5 - offset + 1) % vertices.size()],
+                                                    vertices[(v5 - offset + 2) % vertices.size()]};
+            vertexFaceIndex[v5] = vertices_v5;
+
+            std::vector<glm::vec3> vertices_v6 = {vertices[(v6 - offset) % vertices.size()],
+                                                    vertices[(v6 - offset + 1) % vertices.size()],
+                                                    vertices[(v6 - offset + 2) % vertices.size()]};
+            vertexFaceIndex[v6] = vertices_v6;
+            
+            /*
             int base = i * (numSegments + 1) + j;
             int nextBase = ((i + 1) % numRings) * (numSegments + 1);
 
@@ -138,78 +206,11 @@ void Torus::generateTorus(float probeRadius, glm::vec3 axisUnitVec, float rotati
                 faceIndices.push_back(v4);
                 faceIndices.push_back(v3);
             }
-
-            /*
-            //point j on ring i
-            int v1 = i * (numSegments + 1) + j + offset;
-            //next point (j + 1) on ring i
-            int v2 = i * (numSegments + 1) + (j + 1) % numSegments + offset;
-            //point j on ring i + 1
-            int v3 = (i + 1) * (numSegments + 1) + j + offset;
-
-            bool in_v1 = std::find(indices.begin(), indices.end(), v1) != indices.end();
-            bool in_v2 = std::find(indices.begin(), indices.end(), v2) != indices.end();
-            bool in_v3 = std::find(indices.begin(), indices.end(), v3) != indices.end();
-
-            if (vertices_test[v1 - offset].second && vertices_test[v2 - offset].second && vertices_test[v3 - offset].second) {
-                    faceIndices.push_back(v1);
-                    faceIndices.push_back(v2);
-                    faceIndices.push_back(v3);
-            }
-            
-            std::vector<glm::vec3> vertices_v1 = {vertices[(v1 - offset) % vertices.size()],
-                                                    vertices[(v1 - offset + 1) % vertices.size()],
-                                                    vertices[(v1 - offset + 2) % vertices.size()]};
-            vertexFaceIndex[v1] = vertices_v1;
-
-            std::vector<glm::vec3> vertices_v2 = {vertices[(v2 - offset) % vertices.size()],
-                                                    vertices[(v2 - offset + 1) % vertices.size()],
-                                                    vertices[(v2 - offset + 2) % vertices.size()]};
-            vertexFaceIndex[v2] = vertices_v2;
-
-            std::vector<glm::vec3> vertices_v3 = {vertices[(v3 - offset) % vertices.size()],
-                                                    vertices[(v3 - offset + 1) % vertices.size()],
-                                                    vertices[(v3 - offset + 2) % vertices.size()]};
-            vertexFaceIndex[v3] = vertices_v3;
-            
-            //point j on ring i + 1
-            int v4 = (i + 1) * (numSegments + 1) + j + offset;
-            //next point on ring i
-            int v5 = i * (numSegments + 1) + (j + 1) % numSegments + offset;
-            //next point (j + 1) on ring i + 1
-            int v6 = (i + 1) * (numSegments + 1) + (j + 1) % numSegments + offset;
-
-            //std::cout << v5 - offset << std::endl;
-            bool in_v4 = std::find(indices.begin(), indices.end(), v4) != indices.end();
-            bool in_v5 = std::find(indices.begin(), indices.end(), v5) != indices.end();
-            bool in_v6 = std::find(indices.begin(), indices.end(), v6) != indices.end();
-
-
-
-            if (vertices_test[v4 - offset].second && vertices_test[v5 - offset].second && vertices_test[v6 - offset].second) {
-                    faceIndices.push_back(v4);
-                    faceIndices.push_back(v5);
-                    faceIndices.push_back(v6);
-            }
-            
-            std::vector<glm::vec3> vertices_v4 = {vertices[(v4 - offset) % vertices.size()],
-                                                    vertices[(v4 - offset + 1) % vertices.size()],
-                                                    vertices[(v4 - offset + 2) % vertices.size()]};
-            vertexFaceIndex[v4] = vertices_v4;
-
-            std::vector<glm::vec3> vertices_v5 = {vertices[(v5 - offset) % vertices.size()],
-                                                    vertices[(v5 - offset + 1) % vertices.size()],
-                                                    vertices[(v5 - offset + 2) % vertices.size()]};
-            vertexFaceIndex[v5] = vertices_v5;
-
-            std::vector<glm::vec3> vertices_v6 = {vertices[(v6 - offset) % vertices.size()],
-                                                    vertices[(v6 - offset + 1) % vertices.size()],
-                                                    vertices[(v6 - offset + 2) % vertices.size()]};
-            vertexFaceIndex[v6] = vertices_v6;
             */
+            
         }
     }
-    std::cout << "FaceIndices: " << getFaceIndicesCount() << std::endl;
+    //std::cout << "FaceIndices: " << getFaceIndicesCount() << std::endl;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -273,7 +274,7 @@ const std::pair<glm::vec3, float> Torus::getVisibilitySphere(glm::vec3 contactPo
 
     //c' = (|p - a_i| / (|p - a_j| + |p - a_i|)) * (a_j - a_i) (vec3)
     //-> added (+ a_i) 
-    glm::vec3 c_ = ((glm::distance(p, a_i) / (glm::distance(p, a_j) + glm::distance(p, a_i))) * (a_j - a_i)) + (a_i + a_j) * 0.5f;
+    glm::vec3 c_ = ((glm::distance(p, a_i) / (glm::distance(p, a_j) + glm::distance(p, a_i))) * (a_j - a_i)) + t_ij/*(a_i + a_j) * 0.5f*/;
     //std::cout << "c' = " << c_.x << "/" << c_.y << "/" << c_.z << std::endl;
 
     //r_vs = |x - c'| (float)
@@ -356,7 +357,6 @@ const float Torus::getTorusRadius(
     //std::cout << "d_ij^2 = " << part2sqr << std::endl;
 
     //[(r_i + r_j + 2r_p)^2 - d_ij^2]^(1/2)
-    //float part12 = 1 / powf(part1 - part2sqr, 2);
     float part12 = std::sqrtf(part1 - part2sqr);
     //std::cout << "[(r_i + r_j + 2r_p)^2 - d_ij^2]^(1/2) = " << part12 << std::endl;
 
