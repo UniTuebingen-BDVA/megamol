@@ -12,7 +12,7 @@ public:
     explicit Torus(glm::vec3 center, float radius, int numSegments, int numRings);
     //~Torus() = default;
 
-    void generateTorus(float probeRadius, glm::vec3 axisUnitVec, float rotationAngle, int offset, int foffset, glm::vec3 atomPos1, glm::vec3 atomPos2, float atomRadius);
+    void generateTorus(float probeRadius, glm::vec3 axisUnitVec, float rotationAngle, int offset, glm::vec3 atomPos1, glm::vec3 atomPos2, float atomRadius1, float atomRadius2);
 
     void setCenter(const glm::vec3& newCenter) {
         center = newCenter;
@@ -59,10 +59,6 @@ public:
     }
 
     [[nodiscard]] const glm::vec3* getVertices() const {
-        /*std::vector<glm::vec3> temp;
-        for (auto elem : vertices_test) {
-            temp.push_back(elem.first);
-        }*/
         if (vertices.empty()) {
             return nullptr;
         } else {
@@ -72,15 +68,10 @@ public:
     }
 
     [[nodiscard]] const bool getVertices_bool(int i) const {
-        std::vector<bool> temp;
-        for (auto elem : vertices_test) {
-            temp.push_back(elem.second);
-        }
-        if (vertices.empty()) {
+        if (vertices_vs_check.empty()) {
             return false;
         } else {
-            return temp[i];
-            //return &vertices[0];
+            return &vertices_vs_check[i].second;
         }
     }
 
@@ -134,12 +125,13 @@ public:
     static const float getContactCircleDisplacement(glm::vec3 atomPosition1, glm::vec3 atomPosition2, float atomRadius1, float atomRadius2, float probeRadius);
 
     std::vector<glm::vec3> vertices;
-    std::vector<std::pair<glm::vec3, bool>> vertices_test;
+    std::vector<std::pair<glm::vec3, bool>> vertices_vs_check;
     std::vector<glm::vec3> normals;
     std::vector<unsigned int> indices;
     std::vector<unsigned int> faceIndices;
     std::map<int, int> vertexFaceIndices;
     std::map<unsigned int, std::vector<glm::vec3>> vertexFaceIndex;
+    std::vector<glm::vec3> edgeVertices;
 
 private:
     glm::vec3 center;

@@ -145,6 +145,22 @@ private:
     std::vector<unsigned int> findNearestVertice(const std::vector<std::vector<unsigned int>>& edgelord,
         unsigned int& referenceIndex0, const std::vector<float>& vertex, int index);
 
+    //TEST
+    glm::vec3 findClosestVertex(const glm::vec3& inputVertex, const std::vector<glm::vec3>& vertexList);
+    void cleanupFace(std::vector<unsigned int>& face, int indexToRemove);
+    void cleanupFace2(std::vector<unsigned int>& face, std::vector<unsigned int>& indicesToRemove);
+    struct EdgeVerticesOfAtoms {
+        unsigned int index1, index2;
+
+        EdgeVerticesOfAtoms(unsigned int first_index, unsigned int second_index)
+                : index1(first_index < second_index ? first_index : second_index)
+                , index2(first_index < second_index ? second_index : first_index) {}
+
+        bool operator<(const EdgeVerticesOfAtoms& otherEVOA) const {
+            return index1 < otherEVOA.index1 || (index1 == otherEVOA.index1 && index2 < otherEVOA.index2);
+        }
+    };
+    std::vector<unsigned int> borderVertices; 
     /**
      * Gets the data from the source.
      *
@@ -304,8 +320,12 @@ private:
     std::vector<float> color;
     std::vector<unsigned int> face;
 
+    std::vector<float> torusVertices;
+
     std::vector<CutTri> cutTriangles;
 
+    std::vector<std::vector<unsigned int>> edgeVerticesPerAtom;
+    std::vector<glm::vec3> torusEdgeVertices;
     // bools
     bool isFlatShading;
     bool isStitching;
