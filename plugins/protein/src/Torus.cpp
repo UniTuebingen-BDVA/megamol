@@ -258,11 +258,13 @@ const std::pair<glm::vec3, float> Torus::getVisibilitySphere(glm::vec3 contactPo
     glm::vec3 c_ = ((glm::distance(p, a_i) / (glm::distance(p, a_j) + glm::distance(p, a_i))) * (a_j - a_i)) + t_ij;
     //std::cout << "c' = " << c_.x << "/" << c_.y << "/" << c_.z << std::endl;
 
-    //r_vs = |x - c'| (float)
-    float r_vs = glm::distance(x, c_) - 0.05f;
-
     //c = (c' + a_i) - t_ij (vec3)
     glm::vec3 c = (c_ + a_i) - t_ij;
+
+    //r_vs = |x - c'| (float)
+    //more accurate with |x - c|
+    float r_vs = glm::distance(x, c /*c_*/) /* - 0.1375f*/;
+
     std::cout << "vsCenter = " << c.x << "/" << c.y << "/" << c.z << std::endl;
     std::cout << "vsRad = " << r_vs << std::endl;
 

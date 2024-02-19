@@ -160,7 +160,11 @@ private:
             return index1 < otherEVOA.index1 || (index1 == otherEVOA.index1 && index2 < otherEVOA.index2);
         }
     };
-    std::vector<unsigned int> borderVertices; 
+    std::vector<unsigned int> borderVertices;
+
+    std::vector<glm::vec3> vsVertices;
+    std::vector<glm::vec3> calcVSVertices(glm::vec3 center, float radius, int lat, int lon);
+    void addVSFaces(std::vector<unsigned int> vsVertexIndices, int lat, int lon);
     /**
      * Gets the data from the source.
      *

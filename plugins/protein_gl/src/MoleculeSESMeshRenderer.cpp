@@ -582,7 +582,7 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
         // fill the triangle mesh with data
         if (this->reducedSurface.empty())
             return false;
-        int subdivision_level = 2;
+        int subdivision_level = 3;
         auto ico = new Icosphere(1, subdivision_level, !isFlatShading);
         std::vector<std::vector<unsigned int>> multipleVertexPerIco = getMultipleVertices(ico);
         int vertex_counter = (int)(ico->getVertexCount() * atomCnt);
@@ -609,9 +609,10 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                 normal.push_back(ico->getNormals()[j][2]);
 
 
-                /*color.push_back(0.6f);
                 color.push_back(0.6f);
-                color.push_back(0.6f);*/
+                color.push_back(0.6f);
+                color.push_back(0.6f);
+                /*
                 if (i == 0) {
                     color.push_back(1.0f);
                     color.push_back(0.0f);
@@ -625,7 +626,7 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                     color.push_back(0.0f);
                     color.push_back(1.0f);
                 }
-
+                */
                 /*color.push_back(0.0f);
                 color.push_back(0.0f);
                 color.push_back(0.0f);*/
@@ -856,11 +857,16 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
         }
 
         //set subdivision for torus
-        int numSegments = 60;
-        int numRings = 40;
+        int numSegments = 90;
+        int numRings = 60;
 
         bool faceRemoval = false;
         bool withStitching = false;
+        bool renderVS = false;
+        bool renderPS = false;
+        bool coloredContactPoint = false;
+
+        //probeRadius = 0.2f;
 
         //generate torus for every colliding atom pair
         for (auto elem : atomCollisions) {
@@ -940,7 +946,7 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                     float dist = glm::distance(currentVertex, vsCenter);
 
                     //if vertex is inside of vs, add its index in face to indicesToRemove
-                    if (dist <= vsRadius) {
+                    if (dist <= vsRadius - 0.05f) {
                         indicesToRemove.push_back(i / 3);
                     }
                 }
@@ -1016,7 +1022,7 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                 }
             }
             
-            //add generated vertices to global vertex structure
+            //add generated vertices of torus to global vertex structure
             int acceptedVertices = 0;
             for (int i = 0; i < torus.getVertexCount(); i++) {
                 //need to add all vertices, remove torus triangles outside of vs by only adding those to face, ignore next comment
@@ -1028,12 +1034,20 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                     torusVertices.push_back(torus.getVertices()[i][0]);
                     torusVertices.push_back(torus.getVertices()[i][1]);
                     torusVertices.push_back(torus.getVertices()[i][2]);
+                    
+                    color.push_back(0.6f);
+                    color.push_back(0.6f);
+                    color.push_back(0.6f);
+                    
                     /*color.push_back(1.0f);
                     color.push_back(0.0f);
-                    color.push_back(0.0f);*/
-                    color.push_back(0.6f);
-                    color.push_back(0.6f);
-                    color.push_back(0.6f);
+                    color.push_back(0.0f);
+                    */
+                    /*
+                    color.push_back(0.0f);
+                    color.push_back(1.0f);
+                    color.push_back(0.0f);
+                    */
                     normal.push_back(torus.getNormals()[i][0]);
                     normal.push_back(torus.getNormals()[i][1]);
                     normal.push_back(torus.getNormals()[i][2]);
@@ -1115,7 +1129,7 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                         color.push_back(0.6f);
                         color.push_back(0.6f);
 
-                        glm::vec3 vertexNormal = glm::normalize(point);
+                        glm::vec3 vertexNormal = glm::normalize(point - center);
                         normal.push_back(vertexNormal.x);
                         normal.push_back(vertexNormal.y);
                         normal.push_back(vertexNormal.z);
@@ -1136,6 +1150,110 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                 }
                 
             }
+
+            if (renderPS) {
+                int lat = 30;
+                int lon = 60;
+                std::vector<glm::vec3> currentVSVertices = calcVSVertices(probePos, probeRadius, lat, lon);
+                std::vector<unsigned int> vsVertexIndices;
+
+                for (glm::vec3 vsVertex : currentVSVertices) {
+                    unsigned int index = vertex.size() / 3;
+                    vsVertexIndices.push_back(index);
+                    //std::cout << "index: " << index << std::endl;
+
+                    glm::vec3 vsVertexNormal = glm::normalize(vsVertex - probePos);
+
+                    //std::cout << vsVertex.x << "/" << vsVertex.y << "/" << vsVertex.z << std::endl;
+
+                    vertex.push_back(vsVertex.x);
+                    vertex.push_back(vsVertex.y);
+                    vertex.push_back(vsVertex.z);
+
+                    color.push_back(0.0f);
+                    color.push_back(1.0f);
+                    color.push_back(1.0f);
+
+                    normal.push_back(vsVertexNormal.x);
+                    normal.push_back(vsVertexNormal.y);
+                    normal.push_back(vsVertexNormal.z);
+                }
+
+                addVSFaces(vsVertexIndices, lat, lon);
+
+                offset += currentVSVertices.size() * 3;
+            }
+
+            if (renderVS) {
+                int lat = 30;
+                int lon = 60;
+                std::vector<glm::vec3> currentVSVertices = calcVSVertices(vsCenter, vsRadius, lat, lon);
+                std::vector<unsigned int> vsVertexIndices;
+
+                for (glm::vec3 vsVertex : currentVSVertices) {
+                    unsigned int index = vertex.size() / 3;
+                    vsVertexIndices.push_back(index);
+                    //std::cout << "index: " << index << std::endl;
+
+                    glm::vec3 vsVertexNormal = glm::normalize(vsVertex - vsCenter);
+
+                    //std::cout << vsVertex.x << "/" << vsVertex.y << "/" << vsVertex.z << std::endl;
+
+                    vertex.push_back(vsVertex.x);
+                    vertex.push_back(vsVertex.y);
+                    vertex.push_back(vsVertex.z);
+
+                    color.push_back(1.0f);
+                    color.push_back(1.0f);
+                    color.push_back(0.0f);
+
+                    normal.push_back(vsVertexNormal.x);
+                    normal.push_back(vsVertexNormal.y);
+                    normal.push_back(vsVertexNormal.z);
+                }
+
+                addVSFaces(vsVertexIndices, lat, lon);
+
+                offset += currentVSVertices.size() * 3;
+            }
+
+            if (coloredContactPoint) {
+                int lat = 30;
+                int lon = 60;
+                std::vector<glm::vec3> currentVSVertices = calcVSVertices(contactPoint, 0.05f, lat, lon);
+                std::vector<unsigned int> vsVertexIndices;
+
+                for (glm::vec3 vsVertex : currentVSVertices) {
+                    unsigned int index = vertex.size() / 3;
+                    vsVertexIndices.push_back(index);
+                    //std::cout << "index: " << index << std::endl;
+
+                    glm::vec3 vsVertexNormal = glm::normalize(vsVertex - vsCenter);
+
+                    //std::cout << vsVertex.x << "/" << vsVertex.y << "/" << vsVertex.z << std::endl;
+
+                    vertex.push_back(vsVertex.x);
+                    vertex.push_back(vsVertex.y);
+                    vertex.push_back(vsVertex.z);
+
+                    color.push_back(1.0f);
+                    color.push_back(0.0f);
+                    color.push_back(0.0f);
+
+                    normal.push_back(vsVertexNormal.x);
+                    normal.push_back(vsVertexNormal.y);
+                    normal.push_back(vsVertexNormal.z);
+                }
+
+                addVSFaces(vsVertexIndices, lat, lon);
+
+                offset += currentVSVertices.size() * 3;
+            }
+
+            /*for (int i = 0; i < face.size(); i += 3) {
+                std::cout << "triangle " << i / 3 + 1 << ": " << face[i] << "/" << face[i + 1] << "/" << face[i + 2] << std::endl;
+            }*/
+
             //update offset
             offset += torus.getVertexCount();
         }
@@ -1394,3 +1512,69 @@ std::vector<unsigned int> MoleculeSESMeshRenderer::findVector(const std::vector<
  * eltech language tool
  *
  */
+
+
+//Visibiity Sphere
+std::vector<glm::vec3> MoleculeSESMeshRenderer::calcVSVertices(glm::vec3 center, float radius, int lat, int lon) {
+    std::vector<glm::vec3>().swap(vsVertices);
+
+    for (int i = 0; i <= lat; ++i) {
+        float phi = pi * static_cast<float>(i) / static_cast<float>(lat);
+        for (int j = 0; j <= lon; ++j) {
+            float theta = 2 * pi * static_cast<float>(j) / static_cast<float>(lon);
+
+            float x = center.x + radius * sin(phi) * cos(theta);
+            float y = center.y + radius * sin(phi) * sin(theta);
+            float z = center.z + radius * cos(phi);
+
+            glm::vec3 vertex(x, y, z);
+
+            vsVertices.push_back(vertex);
+        }
+    }
+
+    return vsVertices;
+}
+
+void MoleculeSESMeshRenderer::addVSFaces(std::vector<unsigned int> vsVertexIndices, int lat, int lon) {
+    for (int i = 0; i < lat; ++i) {
+        for (int j = 0; j < lon; ++j) {
+            unsigned int first = i * (lon + 1) + j;
+            unsigned int second = first + lon + 1;
+
+            /*std::cout << "first: " << first << std::endl;
+            std::cout << "second: " << second << std::endl;*/
+
+            face.push_back(vsVertexIndices[first]);
+            face.push_back(vsVertexIndices[second]);
+            face.push_back(vsVertexIndices[first + 1]);
+            /*std::cout << "1: added triangle (" << vsVertexIndices[first] << "/" << vsVertexIndices[second] << "/"
+                      << vsVertexIndices[first + 1] << ")"
+                      << std::endl;*/
+
+           /* std::cout << "1: added triangle:" << std::endl;
+            std::cout << "(" << vertex[vsVertexIndices[first]] << vertex[vsVertexIndices[first] + 1]
+                      << vertex[vsVertexIndices[first] + 2] << ")" << std::endl;
+            std::cout << "(" << vertex[vsVertexIndices[second]] << vertex[vsVertexIndices[second] + 1]
+                      << vertex[vsVertexIndices[second] + 2] << ")" << std::endl;
+            std::cout << "(" << vertex[vsVertexIndices[first + 1]] << vertex[vsVertexIndices[first + 1] + 1]
+                      << vertex[vsVertexIndices[first + 1] + 2] << ")" << std::endl;*/
+
+            face.push_back(vsVertexIndices[first + 1]);
+            face.push_back(vsVertexIndices[second]);
+            face.push_back(vsVertexIndices[second + 1]);
+            /*std::cout << "2: added triangle (" << vsVertexIndices[first + 1] << "/" << vsVertexIndices[second] << "/"
+                      << vsVertexIndices[second + 1]
+                      << ")" << std::endl;*/
+
+            /*std::cout << "2: added triangle:" << std::endl;
+            std::cout << "(" << vertex[vsVertexIndices[first + 1]] << vertex[vsVertexIndices[first + 1] + 1]
+                      << vertex[vsVertexIndices[first + 1] + 2] << ")" << std::endl;
+            std::cout << "(" << vertex[vsVertexIndices[second]] << vertex[vsVertexIndices[second] + 1]
+                      << vertex[vsVertexIndices[second] + 2] << ")" << std::endl;
+            std::cout << "(" << vertex[vsVertexIndices[second + 1]] << vertex[vsVertexIndices[second + 1] + 1]
+                      << vertex[vsVertexIndices[second + 1] + 2] << ")" << std::endl;*/
+
+        }
+    }
+}
