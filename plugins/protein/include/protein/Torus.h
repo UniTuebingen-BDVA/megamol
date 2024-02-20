@@ -123,7 +123,14 @@ public:
     static const glm::vec3 getContactCircleCenter(glm::vec3 atomPosition1, glm::vec3 atomPosition2, float atomRadius1, float atomRadius2, float probeRadius);
     static const float getContactCircleRadius(glm::vec3 atomPosition1, glm::vec3 atomPosition2, float atomRadius1, float atomRadius2, float probeRadius);
     static const float getContactCircleDisplacement(glm::vec3 atomPosition1, glm::vec3 atomPosition2, float atomRadius1, float atomRadius2, float probeRadius);
-
+    static const glm::vec3 getConcaveArcPlaneNormal(glm::vec3 atomPosition1, glm::vec3 atomPosition2, glm::vec3 atomPosition3,
+                                                    float atomRadius1, float atomRadius2, float atomRadius3, float probeRadius);
+    static const float getConcaveTriangleAngle(glm::vec3 atomPosition1, glm::vec3 atomPosition2, glm::vec3 atomPosition3,
+                                               float atomRadius1, float atomRadius2, float atomRadius3, float probeRadius);
+    static const float getConvexFaceAngle(float concaveTriangleAngle);
+    static const float getSaddleWrapAngle(glm::vec3 atomPosition1, glm::vec3 atomPosition2, glm::vec3 atomPosition3, glm::vec3 atomPosition4,
+                                          float atomRadius1, float atomRadius2, float atomRadius3, float atomRadius4, float probeRadius);
+    static const float getSaddleWithAngle(float contactCircleRadius, float contactCircleDisplacement);
     std::vector<glm::vec3> vertices;
     std::vector<std::pair<glm::vec3, bool>> vertices_vs_check;
     std::vector<glm::vec3> normals;

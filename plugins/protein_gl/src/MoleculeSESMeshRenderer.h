@@ -165,6 +165,8 @@ private:
     std::vector<glm::vec3> vsVertices;
     std::vector<glm::vec3> calcVSVertices(glm::vec3 center, float radius, int lat, int lon);
     void addVSFaces(std::vector<unsigned int> vsVertexIndices, int lat, int lon);
+    unsigned int debugTest = 0;
+    std::vector<unsigned int> edgeIndices;
     /**
      * Gets the data from the source.
      *

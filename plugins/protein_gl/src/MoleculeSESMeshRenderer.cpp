@@ -582,7 +582,7 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
         // fill the triangle mesh with data
         if (this->reducedSurface.empty())
             return false;
-        int subdivision_level = 3;
+        int subdivision_level = 2;
         auto ico = new Icosphere(1, subdivision_level, !isFlatShading);
         std::vector<std::vector<unsigned int>> multipleVertexPerIco = getMultipleVertices(ico);
         int vertex_counter = (int)(ico->getVertexCount() * atomCnt);
@@ -608,10 +608,11 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                 normal.push_back(ico->getNormals()[j][1]);
                 normal.push_back(ico->getNormals()[j][2]);
 
-
+                /*
                 color.push_back(0.6f);
                 color.push_back(0.6f);
                 color.push_back(0.6f);
+                */
                 /*
                 if (i == 0) {
                     color.push_back(1.0f);
@@ -627,9 +628,10 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                     color.push_back(1.0f);
                 }
                 */
-                /*color.push_back(0.0f);
+                
+                color.push_back(1.0f);
                 color.push_back(0.0f);
-                color.push_back(0.0f);*/
+                color.push_back(0.0f);
 
                 muss_raus.push_back(false);
             }
@@ -663,7 +665,24 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                     int atomIndex1 = i;
                     int atomIndex2 = j / ico->getVertexCount();
 
-                    atomCollisions.insert({atomIndex1, atomIndex2});
+                    //atomCollisions.insert({atomIndex1, atomIndex2});
+                }
+            }
+
+            float atomRad1 = mol->AtomTypes()[mol->AtomTypeIndices()[i]].Radius();
+            for (auto j = i + 1; j < atomCnt; j++) {
+                float atom_2_x = mol->AtomPositions()[(3 * j) + 0];
+                float atom_2_y = mol->AtomPositions()[(3 * j) + 1];
+                float atom_2_z = mol->AtomPositions()[(3 * j) + 2];
+
+                glm::vec3 atomPos1(atom_x, atom_y, atom_z);
+                glm::vec3 atomPos2(atom_2_x, atom_2_y, atom_2_z);
+
+                float distance = glm::distance(atomPos1, atomPos2);
+                float atomRad2 = mol->AtomTypes()[mol->AtomTypeIndices()[j]].Radius();
+                //used 1.25 to avoid singularities
+                if (distance < atomRad1 + atomRad2 + probeRadius * 1.25f) {
+                    atomCollisions.insert({i, j});
                 }
             }
         }
@@ -865,6 +884,10 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
         bool renderVS = false;
         bool renderPS = false;
         bool coloredContactPoint = false;
+        bool sphereTriangleTest = false;
+
+        int faceLimit = face.size();
+        
 
         //probeRadius = 0.2f;
 
@@ -946,7 +969,7 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                     float dist = glm::distance(currentVertex, vsCenter);
 
                     //if vertex is inside of vs, add its index in face to indicesToRemove
-                    if (dist <= vsRadius - 0.05f) {
+                    if (dist <= vsRadius) {
                         indicesToRemove.push_back(i / 3);
                     }
                 }
@@ -982,6 +1005,7 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                 }
                 face = std::move(newFace);
 
+                /*
                 //look for edge vertices for each atom, needed for stitching
                 std::vector<EdgeVerticesOfAtoms> atomEdges;
                 for (int i = 0; i < face.size(); i += 3) {
@@ -998,6 +1022,7 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                 }
 
                 //count occurences of each vertex index in each edge
+                //<index, occurences>
                 std::unordered_map<unsigned int, int> vertexCount;
                 for (const auto& edge : atomEdges) {
                     vertexCount[edge.index1]++;
@@ -1020,6 +1045,7 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                     edgeVerticesAtom.push_back(vertex[(elem * 3) + 1]);
                     edgeVerticesAtom.push_back(vertex[(elem * 3) + 2]);
                 }
+                */
             }
             
             //add generated vertices of torus to global vertex structure
@@ -1034,20 +1060,21 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                     torusVertices.push_back(torus.getVertices()[i][0]);
                     torusVertices.push_back(torus.getVertices()[i][1]);
                     torusVertices.push_back(torus.getVertices()[i][2]);
-                    
+                    /*
                     color.push_back(0.6f);
                     color.push_back(0.6f);
                     color.push_back(0.6f);
-                    
-                    /*color.push_back(1.0f);
+                    */
+                    /*
+                    color.push_back(1.0f);
                     color.push_back(0.0f);
                     color.push_back(0.0f);
                     */
-                    /*
+                    
                     color.push_back(0.0f);
                     color.push_back(1.0f);
                     color.push_back(0.0f);
-                    */
+                    
                     normal.push_back(torus.getNormals()[i][0]);
                     normal.push_back(torus.getNormals()[i][1]);
                     normal.push_back(torus.getNormals()[i][2]);
@@ -1090,6 +1117,58 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
 
             //stitching
             if (withStitching) {
+                //COPY FROM FACE REMOVAL
+                //look for edge vertices for each atom, needed for stitching
+                std::vector<EdgeVerticesOfAtoms> atomEdges;
+                for (int i = 0; i < faceLimit; i += 3) {
+                    //add all edges of all visible triangles
+
+                    //std::cout << "triangle " << i / 3 << ": " << face[i] << "/" << face[i + 1] << "/" << face[i + 2] << std::endl;
+                    EdgeVerticesOfAtoms edge1 = EdgeVerticesOfAtoms(face[i], face[i + 1]);
+                    EdgeVerticesOfAtoms edge2 = EdgeVerticesOfAtoms(face[i + 1], face[i + 2]);
+                    EdgeVerticesOfAtoms edge3 = EdgeVerticesOfAtoms(face[i + 2], face[i]);
+
+                    atomEdges.push_back(edge1);
+                    atomEdges.push_back(edge2);
+                    atomEdges.push_back(edge3);
+                }
+
+                //count occurences of each vertex index in each edge
+                //<index, occurences>
+                std::unordered_map<unsigned int, int> vertexCount;
+                for (const auto& edge : atomEdges) {
+                    vertexCount[edge.index1]++;
+                    vertexCount[edge.index2]++;
+                }
+
+                //if a vertex has less than six occurences it's an edge vertex
+                
+                for (auto elem : vertexCount) {
+                    //std::cout << elem.first << " existiert " << elem.second << " mal" << std::endl;
+                    float x = vertex[elem.first * 3];
+                    float y = vertex[(elem.first * 3) + 1];
+                    float z = vertex[(elem.first * 3) + 2];
+                    glm::vec3 vert(x, y, z);
+                    //if a vertex is outside of the vs and has less than 6 occurences in the edge list,
+                    //it is an edge vertice that causes a hole
+                    if (elem.second < 6 && glm::distance(vert, vsCenter) > vsRadius - 0.1f) {
+                        if (std::find(edgeIndices.begin(), edgeIndices.end(), elem.first) == edgeIndices.end()) {
+                            edgeIndices.push_back(elem.first);
+                        }
+                    }
+                }
+
+                std::cout << "atomEdgeIndices.size(): " << edgeIndices.size() << std::endl;
+
+                //convert indices to vertex values
+                for (auto elem : edgeIndices) {
+                    //std::cout << elem << std::endl;
+                    edgeVerticesAtom.push_back(vertex[elem * 3]);
+                    edgeVerticesAtom.push_back(vertex[(elem * 3) + 1]);
+                    edgeVerticesAtom.push_back(vertex[(elem * 3) + 2]);
+                }
+                //ENDE COPY
+
                 for (int i = 0; i < edgeVerticesAtom.size(); i += 3) {
                     float x = edgeVerticesAtom[i];
                     float y = edgeVerticesAtom[i + 1];
@@ -1098,7 +1177,6 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                     //take current and next vertex of edge vertices of atoms, calculate the closest vertex of torus edge vertices
                     //form two triangles out of those four vertices
 
-                    //problem when atom changes
 
                     glm::vec3 currentVertex(x, y, z);
                     //std::cout << "currentVertex: " << currentVertex.x << "/" << currentVertex.y << "/" << currentVertex.z << std::endl;
@@ -1107,16 +1185,46 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                     //std::cout << "closestVertexToCurrent: " << closestVertexToCurrent.x << "/" << closestVertexToCurrent.y << "/" << closestVertexToCurrent.z << std::endl;
 
                     glm::vec3 nextVertex;
-                    if (i + 3 >= edgeVerticesAtom.size()) {
-                        nextVertex = glm::vec3(edgeVerticesAtom[0], edgeVerticesAtom[1], edgeVerticesAtom[2]);
-                    } else {
-                        nextVertex =
-                            glm::vec3(edgeVerticesAtom[i + 3], edgeVerticesAtom[i + 4], edgeVerticesAtom[i + 5]);
+                    //look for the point in edgeVerticesAtom with the smallest spatial distance
+                    //PROBLEM: 1---2-----3
+                    //i = 1  =>  next = 2
+                    //i = 2  =>  next = 1
+                    //next should be 3 to fill the whole structure
+                    float minDist = std::numeric_limits<float>::max();
+                    if (i + 3 < edgeVerticesAtom.size()) {
+                        for (int j = i + 3; j < edgeVerticesAtom.size(); j += 3) {
+                            float next_x = edgeVerticesAtom[j];
+                            float next_y = edgeVerticesAtom[j + 1];
+                            float next_z = edgeVerticesAtom[j + 2];
+                            glm::vec3 next(next_x, next_y, next_z);
+
+                            float distance = glm::distance(currentVertex, next);
+                            if (distance < minDist) {
+                                minDist = distance;
+                                nextVertex = next;
+                            }
+                        }
+                    }
+                    if (i - 3 >= 0) {
+                        for (int j = i - 3; j < edgeVerticesAtom.size(); j -= 3) {
+                            float next_x = edgeVerticesAtom[j];
+                            float next_y = edgeVerticesAtom[j + 1];
+                            float next_z = edgeVerticesAtom[j + 2];
+                            glm::vec3 next(next_x, next_y, next_z);
+
+                            float distance = glm::distance(currentVertex, next);
+                            if (distance < minDist) {
+                                minDist = distance;
+                                nextVertex = next;
+                            }
+                        }
                     }
                     //std::cout << "nextVertex: " << nextVertex.x << "/" << nextVertex.y << "/" << nextVertex.z << std::endl;
 
                     glm::vec3 closestVertexToNext = findClosestVertex(nextVertex, torusEdgeVertices);
                     //std::cout << "closestVertexToNext: " << closestVertexToNext.x << "/" << closestVertexToNext.y << "/" << closestVertexToNext.z << std::endl;
+                    
+
 
                     
                     std::vector<unsigned int> tempIndices;
@@ -1125,9 +1233,9 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                         vertex.push_back(point.y);
                         vertex.push_back(point.z);
 
-                        color.push_back(0.6f);
-                        color.push_back(0.6f);
-                        color.push_back(0.6f);
+                        color.push_back(0.0f);
+                        color.push_back(1.0f);
+                        color.push_back(1.0f);
 
                         glm::vec3 vertexNormal = glm::normalize(point - center);
                         normal.push_back(vertexNormal.x);
@@ -1228,7 +1336,7 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                     vsVertexIndices.push_back(index);
                     //std::cout << "index: " << index << std::endl;
 
-                    glm::vec3 vsVertexNormal = glm::normalize(vsVertex - vsCenter);
+                    glm::vec3 vsVertexNormal = glm::normalize(vsVertex - contactPoint);
 
                     //std::cout << vsVertex.x << "/" << vsVertex.y << "/" << vsVertex.z << std::endl;
 
@@ -1254,10 +1362,55 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                 std::cout << "triangle " << i / 3 + 1 << ": " << face[i] << "/" << face[i + 1] << "/" << face[i + 2] << std::endl;
             }*/
 
+            if (sphereTriangleTest) {
+                float atomRadius3 = mol->AtomTypes()[mol->AtomTypeIndices()[0]].Radius();
+
+                glm::vec3 atomPos3(mol->AtomPositions()[3 * 0 + 0], mol->AtomPositions()[3 * 0 + 1],
+                                   mol->AtomPositions()[3 * 0 + 2]);
+
+                if (debugTest == 2) {
+                    glm::vec3 triProbePos = torus.getProbePosition(atomPos1, atomPos2, atomPos3, atomRadius1, atomRadius2, atomRadius3, probeRadius);
+
+                    int lat = 30;
+                    int lon = 60;
+                    std::vector<glm::vec3> currentTriProbeVertices = calcVSVertices(triProbePos, probeRadius, lat, lon);
+                    std::vector<unsigned int> triProbeVertexIndices;
+                    for (glm::vec3 vsVertex : currentTriProbeVertices) {
+                        unsigned int index = vertex.size() / 3;
+                        triProbeVertexIndices.push_back(index);
+                        //std::cout << "index: " << index << std::endl;
+
+                        glm::vec3 vsVertexNormal = glm::normalize(vsVertex - triProbePos);
+
+                        //std::cout << vsVertex.x << "/" << vsVertex.y << "/" << vsVertex.z << std::endl;
+
+                        vertex.push_back(vsVertex.x);
+                        vertex.push_back(vsVertex.y);
+                        vertex.push_back(vsVertex.z);
+
+                        color.push_back(1.0f);
+                        color.push_back(0.0f);
+                        color.push_back(1.0f);
+
+                        normal.push_back(vsVertexNormal.x);
+                        normal.push_back(vsVertexNormal.y);
+                        normal.push_back(vsVertexNormal.z);
+                    }
+
+                    addVSFaces(triProbeVertexIndices, lat, lon);
+
+                    offset += currentTriProbeVertices.size() * 3;
+
+                    
+                }
+                debugTest++;
+            }
+            std::cout << "debugTest: " << debugTest << std::endl;
+
             //update offset
             offset += torus.getVertexCount();
         }
-
+        
         
         delete ico;
     }
