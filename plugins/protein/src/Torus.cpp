@@ -445,6 +445,8 @@ const float Torus::getProbeHeight(glm::vec3 atomPosition1, glm::vec3 atomPositio
 
 const glm::vec3 Torus::getProbePosition(glm::vec3 atomPosition1, glm::vec3 atomPosition2, glm::vec3 atomPosition3,
                                         float atomRadius1, float atomRadius2, float atomRadius3, float probeRadius) {
+
+    /*
     glm::vec3 v1 = atomPosition2 - atomPosition1;
     glm::vec3 v2 = atomPosition3 - atomPosition1;
     glm::vec3 normal = glm::normalize(glm::cross(v1, v2));
@@ -466,8 +468,9 @@ const glm::vec3 Torus::getProbePosition(glm::vec3 atomPosition1, glm::vec3 atomP
         std::cout << "WRONG PROBE CENTER" << std::endl;
         return probeCenter;
     }
+    */
 
-    /*
+    
     //b_ijk, h_ijk, u_ijk
     glm::vec3 basePoint =
         getBasePoint(atomPosition1, atomPosition2, atomPosition3, atomRadius1, atomRadius2, atomRadius3, probeRadius);
@@ -475,10 +478,10 @@ const glm::vec3 Torus::getProbePosition(glm::vec3 atomPosition1, glm::vec3 atomP
         getProbeHeight(atomPosition1, atomPosition2, atomPosition3, atomRadius1, atomRadius2, atomRadius3, probeRadius);
     glm::vec3 basePlaneNormal = getBasePlaneNormal(atomPosition1, atomPosition2, atomPosition3);
     //TODO
-    glm::vec3 probePosition = basePoint;
+    glm::vec3 probePosition = basePoint - (probeHeight * basePlaneNormal);
 
     return probePosition; //p_ijk
-    */
+    
 }
 
 const glm::vec3 Torus::getProbeVertex(glm::vec3 atomPosition1, glm::vec3 atomPosition2, glm::vec3 atomPosition3,

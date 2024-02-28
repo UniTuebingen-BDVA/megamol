@@ -159,14 +159,33 @@ private:
         bool operator<(const EdgeVerticesOfAtoms& otherEVOA) const {
             return index1 < otherEVOA.index1 || (index1 == otherEVOA.index1 && index2 < otherEVOA.index2);
         }
+
+        bool operator==(const EdgeVerticesOfAtoms& otherEVOA) const {
+            return index1 == otherEVOA.index1 && index2 == otherEVOA.index2;
+        }
     };
     std::vector<unsigned int> borderVertices;
-
+    std::vector<float> edgeVerticesAtom;
     std::vector<glm::vec3> vsVertices;
     std::vector<glm::vec3> calcVSVertices(glm::vec3 center, float radius, int lat, int lon);
     void addVSFaces(std::vector<unsigned int> vsVertexIndices, int lat, int lon);
     unsigned int debugTest = 0;
     std::vector<unsigned int> edgeIndices;
+    std::vector<std::pair<unsigned int, unsigned int>> usedVertexPairs;
+
+    bool comparePairs(
+        const std::pair<unsigned int, unsigned int>& pair1, const std::pair<unsigned int, unsigned int>& pair2) {
+        if (pair1 == pair2) {
+            return true;
+        }
+
+        if (pair1 == std::make_pair(pair2.second, pair2.first)) {
+            return true;
+        }
+
+        return false;
+    }
+    std::vector<unsigned int> icoVertexCount;
     /**
      * Gets the data from the source.
      *

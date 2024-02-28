@@ -784,6 +784,8 @@ void Icosphere::addSubLineIndices(unsigned int i1,
 {
     lineIndices.push_back(i1);      // i1 - i2
     lineIndices.push_back(i2);
+    lineIndices.push_back(i6);      //maybe remove again(?)
+    lineIndices.push_back(i1);
     lineIndices.push_back(i2);      // i2 - i6
     lineIndices.push_back(i6);
     lineIndices.push_back(i2);      // i2 - i3
@@ -792,6 +794,8 @@ void Icosphere::addSubLineIndices(unsigned int i1,
     lineIndices.push_back(i4);
     lineIndices.push_back(i6);      // i6 - i4
     lineIndices.push_back(i4);
+    lineIndices.push_back(i5);      //maybe remove again(?)
+    lineIndices.push_back(i6);
     lineIndices.push_back(i3);      // i3 - i4
     lineIndices.push_back(i4);
     lineIndices.push_back(i4);      // i4 - i5

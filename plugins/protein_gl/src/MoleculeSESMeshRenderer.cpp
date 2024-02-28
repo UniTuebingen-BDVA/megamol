@@ -560,6 +560,7 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
         atomCnt = 2;
     }
 
+    bool seperateColors = true;
 
     ctmd->SetFrameCount(1);
     ctmd->AccessBoundingBoxes() = mol->AccessBoundingBoxes();
@@ -582,7 +583,7 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
         // fill the triangle mesh with data
         if (this->reducedSurface.empty())
             return false;
-        int subdivision_level = 2;
+        int subdivision_level = 3;
         auto ico = new Icosphere(1, subdivision_level, !isFlatShading);
         std::vector<std::vector<unsigned int>> multipleVertexPerIco = getMultipleVertices(ico);
         int vertex_counter = (int)(ico->getVertexCount() * atomCnt);
@@ -592,8 +593,9 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
         //std::vector<std::vector<unsigned int>> edgeVerticesPerAtom;
         //Hier befinden sich alle Vertices die Teile einer Kante eines Atoms sind
 
-
+        icoVertexCount.push_back(0);
         for (auto i = 0; i < atomCnt; i++) {
+            icoVertexCount.push_back((ico->getVertexCount() * 3 + icoVertexCount[i]));
             for (int j = 0; j < ico->getVertexCount(); j++) {
                 //Vertex-Koordinaten
                 vertex.push_back(ico->getVertices()[j][0] * mol->AtomTypes()[mol->AtomTypeIndices()[i]].Radius() +
@@ -608,33 +610,22 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                 normal.push_back(ico->getNormals()[j][1]);
                 normal.push_back(ico->getNormals()[j][2]);
 
-                /*
-                color.push_back(0.6f);
-                color.push_back(0.6f);
-                color.push_back(0.6f);
-                */
-                /*
-                if (i == 0) {
+                if (seperateColors) {
                     color.push_back(1.0f);
                     color.push_back(0.0f);
-                    color.push_back(0.0f);
-                } else if (i == 1) {
-                    color.push_back(0.0f);
-                    color.push_back(1.0f);
                     color.push_back(0.0f);
                 } else {
-                    color.push_back(0.0f);
-                    color.push_back(0.0f);
-                    color.push_back(1.0f);
+                    color.push_back(0.6f);
+                    color.push_back(0.6f);
+                    color.push_back(0.6f);
                 }
-                */
-                
-                color.push_back(1.0f);
-                color.push_back(0.0f);
-                color.push_back(0.0f);
 
                 muss_raus.push_back(false);
             }
+        }
+
+        for (auto elem : icoVertexCount) {
+            std::cout << elem << std::endl;
         }
 
         for (auto i = 0; i < atomCnt; i++) {
@@ -760,6 +751,12 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                     face.push_back(ico->getVertexCount() * i + ico->getIndices()[j + 1]); //Vertice 2 von face
                     face.push_back(ico->getVertexCount() * i + ico->getIndices()[j + 2]); //Vertice 3 von face
                 }
+                /*
+                face.push_back(ico->getVertexCount() * i + ico->getIndices()[j + 0]); //Vertice 1 von face
+                face.push_back(ico->getVertexCount() * i + ico->getIndices()[j + 1]); //Vertice 2 von face
+                face.push_back(ico->getVertexCount() * i + ico->getIndices()[j + 2]); //Vertice 3 von face
+                */
+                
 
                 // checks for each Vertex of a face, weather it is in an atom or not
                 //Alle Vertices sind außerhalb anderen Kugeln, also werden sie gezeichnet!
@@ -831,17 +828,19 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                     // Was kann ich hier rein bringen
                     // Nehme 3 Listen : Done
                     //  Fülle die Listen mit Daten
-                    /*
-                     *  +------------------+
-                        |     Vertice      |
-                        +------------------+
-                        | - besucht: bool  |
-                        | - index: int[4]  |
-                        | - index_atom: int|
-                        +------------------+
-
-                     */
+                    //
+                    //  +------------------+
+                    //  |     Vertice      |
+                    //  +------------------+
+                    //  | - besucht: bool  |
+                    //  | - index: int[4]  |
+                    //  | - index_atom: int|
+                    //  +------------------+
+                    //
+                    //
                 }
+
+                
             }
             edgeVerticesPerAtom.push_back(atomEdgeVerticeVector);
         }
@@ -879,12 +878,18 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
         int numSegments = 90;
         int numRings = 60;
 
-        bool faceRemoval = false;
-        bool withStitching = false;
+        bool faceRemoval = true;   
+        bool withStitching = true;
+        bool withEdgeVerticesOption0 = true;
+        bool withEdgeVerticesOption1 = false;
+        bool withEdgeVerticesOption2 = false;
+        bool withEdgeVerticesOption3 = false;
+        bool withEdgeVerticesOption4 = false;
         bool renderVS = false;
         bool renderPS = false;
         bool coloredContactPoint = false;
         bool sphereTriangleTest = false;
+        bool oldEdgeIdentifier = false;
 
         int faceLimit = face.size();
         
@@ -893,7 +898,10 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
 
         //generate torus for every colliding atom pair
         for (auto elem : atomCollisions) {
-
+            edgeIndices.clear();
+            std::vector<unsigned int>().swap(edgeIndices);
+            edgeVerticesAtom.clear();
+            std::vector<float>().swap(edgeVerticesAtom);
             //values of colliding atoms
             unsigned int atomIndex1 = elem.first;
             unsigned int atomIndex2 = elem.second;
@@ -922,8 +930,7 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
 
             //torus generation
             Torus torus(center, radius, numSegments, numRings);
-            torus.generateTorus(probeRadius, axisUnitVec, rotationAngle, offset, atomPos1, atomPos2,
-                atomRadius1, atomRadius2);
+            torus.generateTorus(probeRadius, axisUnitVec, rotationAngle, offset, atomPos1, atomPos2, atomRadius1, atomRadius2);
 
             //Visibility Sphere: used to remove vertices of atoms inside of visibility sphere
             //dummy point for visibility sphere
@@ -950,16 +957,38 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
             }
             glm::vec3 vsCenter = visibilitySphere.first;
             float vsRadius = visibilitySphere.second;
-            std::cout << "modified vsRadius: " << vsRadius << std::endl;
-            std::cout << "vsCenter: " << vsCenter.x << "/" << vsCenter.y << "/" << vsCenter.z << std::endl;
-            std::vector<float> stitchingVertex;
 
             //remove all vertices of atoms that are inside of the visibility sphere
-            std::vector<float> edgeVerticesAtom;
+            std::vector<unsigned int> intersec;
+            std::vector<unsigned int> edgeVerticesOption1;
+            std::vector<unsigned int> edgeVerticesOption2;
+            std::vector<unsigned int> edgeVerticesOption3;
+            std::vector<unsigned int> edgeVerticesOption4;
+            std::vector<unsigned int> TEST;
+            std::vector<EdgeVerticesOfAtoms> removedEdgesTEST;
+            std::vector<unsigned int> edgeVerticesOption0;
+            std::vector<EdgeVerticesOfAtoms> borderEdges;
             if (faceRemoval) {
-                //std::cout << "faceSize before removal: " << face.size() << std::endl;
-                //std::cout << "vertex.size() = " << vertex.size() << std::endl;
+                //same for both options
+                std::cout << "Anzahl Dreiecke (vor removal): " << face.size() / 3 << std::endl;
+                std::vector<EdgeVerticesOfAtoms> atomEdgesBeforeRemoval;
+
+                //generate edge pairs for every edge of each atom
+                for (int i = 0; i < face.size(); i += 3) {
+                    EdgeVerticesOfAtoms edge1 = EdgeVerticesOfAtoms(face[i], face[i + 1]);
+                    EdgeVerticesOfAtoms edge2 = EdgeVerticesOfAtoms(face[i + 1], face[i + 2]);
+                    EdgeVerticesOfAtoms edge3 = EdgeVerticesOfAtoms(face[i + 2], face[i]);
+
+                    atomEdgesBeforeRemoval.push_back(edge1);
+                    atomEdgesBeforeRemoval.push_back(edge2);
+                    atomEdgesBeforeRemoval.push_back(edge3);
+                }
+
+                std::cout << "Anzahl ermittelter Kanten (vor removal): " << atomEdgesBeforeRemoval.size() << std::endl;
+
+                //if a vertex is inside of the visibility sphere its triangle needs to be removed
                 std::vector<unsigned int> indicesToRemove;
+                std::vector<bool> vertexRemoved;
                 for (int i = 0; i < vertex.size(); i += 3) {
                     float x = vertex[i];
                     float y = vertex[i + 1];
@@ -971,79 +1000,249 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                     //if vertex is inside of vs, add its index in face to indicesToRemove
                     if (dist <= vsRadius) {
                         indicesToRemove.push_back(i / 3);
+
+                        vertexRemoved.push_back(true);
+                        vertexRemoved.push_back(true);
+                        vertexRemoved.push_back(true);
+                    } else {
+                        vertexRemoved.push_back(false);
+                        vertexRemoved.push_back(false);
+                        vertexRemoved.push_back(false);
                     }
                 }
                 std::sort(indicesToRemove.rbegin(), indicesToRemove.rend());
 
+                if (withEdgeVerticesOption0) {
 
+                    for (int i = 0; i < face.size(); i += 3) {
+                        bool first = (!vertexRemoved[face[i] * 3] && !vertexRemoved[face[i + 1] * 3] &&
+                                      vertexRemoved[face[i + 2] * 3]);
+                        bool second = (!vertexRemoved[face[i] * 3] && vertexRemoved[face[i + 1] * 3] &&
+                                       !vertexRemoved[face[i + 2] * 3]);
+                        bool third = (vertexRemoved[face[i] * 3] && !vertexRemoved[face[i + 1] * 3] &&
+                                      !vertexRemoved[face[i + 2] * 3]);
+
+                        if (first) {
+                            removedEdgesTEST.push_back(EdgeVerticesOfAtoms(face[i], face[i + 1]));
+                        } else if (second) {
+                            removedEdgesTEST.push_back(EdgeVerticesOfAtoms(face[i], face[i + 2]));
+                        } else if (third) {
+                            removedEdgesTEST.push_back(EdgeVerticesOfAtoms(face[i + 1], face[i + 2]));
+                        }
+                        /*if (first || second || third) {
+                            removedEdgesTEST.push_back(EdgeVerticesOfAtoms(face[i], face[i + 1]));
+                            removedEdgesTEST.push_back(EdgeVerticesOfAtoms(face[i], face[i + 2]));
+                            removedEdgesTEST.push_back(EdgeVerticesOfAtoms(face[i + 1], face[i + 2]));
+                        }*/
+                    }
+
+                    
+                    for (const auto& edge : removedEdgesTEST) {
+                        //std::cout << "(" << edge.index1 << "/" << edge.index2 << ")" << std::endl;
+                        for (const auto& otherEdge : atomEdgesBeforeRemoval) {
+                            if (edge == otherEdge) {
+                                edgeVerticesOption0.push_back(edge.index1);
+                                edgeVerticesOption0.push_back(edge.index2);
+                                borderEdges.push_back(edge);
+                            }
+                        }
+                    }
+
+                    std::sort(edgeVerticesOption0.begin(), edgeVerticesOption0.end());
+                    auto lastTEST = std::unique(edgeVerticesOption0.begin(), edgeVerticesOption0.end());
+                    edgeVerticesOption0.erase(lastTEST, edgeVerticesOption0.end());
+                    std::cout << "edgeVerticesOption0.size() = " << edgeVerticesOption0.size() << std::endl;
+                }
+
+                //removeMarker
                 std::vector<bool> removeMarker(face.size(), false);
+                std::set<size_t> trianglesToRemove;
+                //identify all triangles that need to be removed
                 for (auto index : indicesToRemove) {
                     for (size_t i = 0; i < face.size(); ++i) {
                         if (face[i] == index) {
-                            //if at least one vertex of a triangle is inside of vs => remove that triangle
-                            //three values in face are one triangle
-                            //need to make sure to remove the right values in face
-                            //possibilities:
-                            //indexToRemove, +1          , +2
-                            //-1           ,indexToRemove, +1
-                            //-2           ,-1           ,indexToRemove
-
-                            int modResult = i % 3;
-                            removeMarker[i - modResult] = true;
-                            removeMarker[i - modResult + 1] = true;
-                            removeMarker[i - modResult + 2] = true;
+                            //set baseIndexx to the first of three indices of a triangle
+                            size_t baseIndex = i - (i % 3);
+                            trianglesToRemove.insert(baseIndex);
                         }
                     }
                 }
+                //mark all vertices of a triangles to be removed
+                for (auto baseIndex : trianglesToRemove) {
+                    removeMarker[baseIndex] = true;
+                    removeMarker[baseIndex + 1] = true;
+                    removeMarker[baseIndex + 2] = true;
+                }
 
                 std::vector<unsigned int> newFace;
+                std::vector<unsigned int> removedFaces;
                 for (size_t i = 0; i < face.size(); ++i) {
                     if (!removeMarker[i]) {
+                        //if a vector is not marked for removal we keep it
                         //only keep all completely visible triangles
                         newFace.push_back(face[i]);
+                    } else {
+                        //remember all removed vertices to identify edge vertices
+                        //=> if an edge is in the new face structure and in the removed edges 
+                        removedFaces.push_back(face[i]);
                     }
+
                 }
                 face = std::move(newFace);
+                faceLimit = face.size();              
 
-                /*
-                //look for edge vertices for each atom, needed for stitching
-                std::vector<EdgeVerticesOfAtoms> atomEdges;
+                std::vector<EdgeVerticesOfAtoms> atomEdgesAfterRemoval;
                 for (int i = 0; i < face.size(); i += 3) {
-                    //add all edges of all visible triangles
-
-                    //std::cout << "triangle " << i / 3 << ": " << face[i] << "/" << face[i + 1] << "/" << face[i + 2] << std::endl;
                     EdgeVerticesOfAtoms edge1 = EdgeVerticesOfAtoms(face[i], face[i + 1]);
                     EdgeVerticesOfAtoms edge2 = EdgeVerticesOfAtoms(face[i + 1], face[i + 2]);
                     EdgeVerticesOfAtoms edge3 = EdgeVerticesOfAtoms(face[i + 2], face[i]);
 
-                    atomEdges.push_back(edge1);
-                    atomEdges.push_back(edge2);
-                    atomEdges.push_back(edge3);
+                    atomEdgesAfterRemoval.push_back(edge1);
+                    atomEdgesAfterRemoval.push_back(edge2);
+                    atomEdgesAfterRemoval.push_back(edge3);
                 }
 
-                //count occurences of each vertex index in each edge
-                //<index, occurences>
-                std::unordered_map<unsigned int, int> vertexCount;
-                for (const auto& edge : atomEdges) {
-                    vertexCount[edge.index1]++;
-                    vertexCount[edge.index2]++;
+                std::vector<EdgeVerticesOfAtoms> removedEdges;
+                for (int i = 0; i < removedFaces.size(); i += 3) {
+                    EdgeVerticesOfAtoms edge1 = EdgeVerticesOfAtoms(removedFaces[i], removedFaces[i + 1]);
+                    EdgeVerticesOfAtoms edge2 = EdgeVerticesOfAtoms(removedFaces[i + 1], removedFaces[i + 2]);
+                    EdgeVerticesOfAtoms edge3 = EdgeVerticesOfAtoms(removedFaces[i + 2], removedFaces[i]);
+
+                    removedEdges.push_back(edge1);
+                    removedEdges.push_back(edge2);
+                    removedEdges.push_back(edge3);
                 }
 
-                //if a vertex has less than six occurences it's an edge vertex
-                std::vector<unsigned int> edgeIndices;
-                for (auto elem : vertexCount) {
-                    //std::cout << elem.first << " existiert " << elem.second << " mal" << std::endl;
-                    if (elem.second < 6) {
-                        edgeIndices.push_back(elem.first);
+                /*if (withEdgeVerticesOption0) {
+                    for (const auto& edge : removedEdgesTEST) {
+                        for (const auto& otherEdge : atomEdgesAfterRemoval) {
+                            if (edge == otherEdge) {
+                                edgeVerticesOption0.push_back(edge.index1);
+                                edgeVerticesOption0.push_back(edge.index2);
+                            }
+                        }
+                    }
+
+                    std::sort(edgeVerticesOption0.begin(), edgeVerticesOption0.end());
+                    auto lastTEST = std::unique(edgeVerticesOption0.begin(), edgeVerticesOption0.end());
+                    edgeVerticesOption0.erase(lastTEST, edgeVerticesOption0.end());
+                    std::cout << "edgeVerticesOption0.size() = " << edgeVerticesOption0.size() << std::endl;
+                }*/
+
+                if (withEdgeVerticesOption1) {
+                    //if an edge is part of removedEdges and atomEdgesAfterRemoval its vertices are edge vertices
+                    for (const auto& removedEdge : removedEdges) {
+                        for (const auto& remainingEdge : atomEdgesAfterRemoval) {
+                            if (removedEdge == remainingEdge) {
+                                edgeVerticesOption1.push_back(removedEdge.index1);
+                                edgeVerticesOption1.push_back(removedEdge.index2);
+                            }
+                        }
+                    }
+
+                    std::sort(edgeVerticesOption1.begin(), edgeVerticesOption1.end());
+                    auto lastEdgeVerticesOption1 = std::unique(edgeVerticesOption1.begin(), edgeVerticesOption1.end());
+                    edgeVerticesOption1.erase(lastEdgeVerticesOption1, edgeVerticesOption1.end());
+                    std::cout << "edgeVerticesOption1.size() = " << edgeVerticesOption1.size() << std::endl;
+                }
+
+                if (withEdgeVerticesOption2) {
+                    //if a vertex appears less than 6 times in the edges of atomEdgesAfterRemoval it is an edge vertex
+                    std::vector<unsigned int> allVerticesOfEdges;
+                    for (const auto& edge : atomEdgesAfterRemoval) {
+                        allVerticesOfEdges.push_back(edge.index1);
+                        allVerticesOfEdges.push_back(edge.index2);
+                    }
+
+                    std::map<unsigned int, int> vertexCount;
+                    for (const auto& vertex : allVerticesOfEdges) {
+                        vertexCount[vertex]++;
+                    }
+
+                    for (const auto& count : vertexCount) {
+                        if (count.second < 6) {
+                            edgeVerticesOption2.push_back(count.first);
+                        }
+                    }
+
+                    std::sort(edgeVerticesOption2.begin(), edgeVerticesOption2.end());
+                    auto lastEdgeVerticesOption2 = std::unique(edgeVerticesOption2.begin(), edgeVerticesOption2.end());
+                    edgeVerticesOption2.erase(lastEdgeVerticesOption2, edgeVerticesOption2.end());
+                    std::cout << "edgeVerticesOption2.size() = " << edgeVerticesOption2.size() << std::endl;
+                }
+
+                if (withEdgeVerticesOption3) {
+                    //if an edge only appears once in atomEdgesAfterRemoval its vertices are edge vertices
+                    std::map<EdgeVerticesOfAtoms, int> edgeFrequency;
+
+                    for (const EdgeVerticesOfAtoms& edge : atomEdgesAfterRemoval) {
+                        edgeFrequency[edge]++;
+                    }
+
+                    for (const auto& edgeCount : edgeFrequency) {
+                        if (edgeCount.second == 1)
+                        {
+                            edgeVerticesOption3.push_back(edgeCount.first.index1);
+                            edgeVerticesOption3.push_back(edgeCount.first.index2);
+                        }
+                    }
+
+                    std::sort(edgeVerticesOption3.begin(), edgeVerticesOption3.end());
+                    auto lastEdgeVerticesOption3 = std::unique(edgeVerticesOption3.begin(), edgeVerticesOption3.end());
+                    edgeVerticesOption3.erase(lastEdgeVerticesOption3, edgeVerticesOption3.end());
+                    std::cout << "edgeVerticesOption3.size() = " << edgeVerticesOption3.size() << std::endl;
+                }
+
+                if (withEdgeVerticesOption4) {
+                    for (const auto& edge : atomEdgesBeforeRemoval) {
+                        for (const auto& otherEdge : removedEdges) {
+                            if (edge == otherEdge) {
+                                edgeVerticesOption4.push_back(edge.index1);
+                                edgeVerticesOption4.push_back(edge.index2);
+                            }
+                        }
+                    }
+
+                    std::sort(edgeVerticesOption4.begin(), edgeVerticesOption4.end());
+                    auto lastEdgeVerticesOption4 = std::unique(edgeVerticesOption4.begin(), edgeVerticesOption4.end());
+                    edgeVerticesOption4.erase(lastEdgeVerticesOption4, edgeVerticesOption4.end());
+                    std::cout << "edgeVerticesOption4.size() = " << edgeVerticesOption4.size() << std::endl;
+                }
+                
+
+                //TEST
+                for (int i = 0; i < /*atomEdgesBeforeRemoval.size()*/removedEdges.size(); ++i) {
+                    for (int j = 0; j < atomEdgesAfterRemoval.size(); ++j) {
+                        bool first = (removedEdges[i].index1 == atomEdgesAfterRemoval[j].index1);
+                        bool second = (removedEdges[i].index2 == atomEdgesAfterRemoval[j].index2);
+                        if (first && second) {
+                            intersec.push_back(removedEdges[i].index1);
+                            intersec.push_back(removedEdges[i].index2);
+                            
+                        }
                     }
                 }
 
-                //convert indices to vertex values
-                for (auto elem : edgeIndices) {
-                    //std::cout << elem << std::endl;
-                    edgeVerticesAtom.push_back(vertex[elem * 3]);
-                    edgeVerticesAtom.push_back(vertex[(elem * 3) + 1]);
-                    edgeVerticesAtom.push_back(vertex[(elem * 3) + 2]);
+
+                std::sort(intersec.begin(), intersec.end());
+                auto lastIntersec = std::unique(intersec.begin(), intersec.end());
+                intersec.erase(lastIntersec, intersec.end());
+
+                std::cout << "Intersec.size(): " << intersec.size() << std::endl;
+
+                std::vector<unsigned int> borderVertices = edgeVerticesOption0;
+                
+
+                /*for (const auto& elem : edgeVerticesOption2) {
+                    std::cout << elem << std::endl;
+                }*/
+                /*
+                for (const auto& elem : borderVertices) {
+                    if (seperateColors) {
+                        color.at(elem * 3) = 0.925f;
+                        color.at((elem * 3) + 1) = 0.929f;
+                        color.at((elem * 3) + 2) = 0.0f;
+                    }
                 }
                 */
             }
@@ -1060,21 +1259,30 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                     torusVertices.push_back(torus.getVertices()[i][0]);
                     torusVertices.push_back(torus.getVertices()[i][1]);
                     torusVertices.push_back(torus.getVertices()[i][2]);
-                    /*
-                    color.push_back(0.6f);
-                    color.push_back(0.6f);
-                    color.push_back(0.6f);
-                    */
-                    /*
-                    color.push_back(1.0f);
-                    color.push_back(0.0f);
-                    color.push_back(0.0f);
-                    */
-                    
-                    color.push_back(0.0f);
-                    color.push_back(1.0f);
-                    color.push_back(0.0f);
-                    
+
+                    if (seperateColors) {
+                        bool edge = false;
+                        for (int j = 0; j < torus.edgeVertices.size(); j++) {
+                            if (glm::distance(torus.getVertices()[i], torus.edgeVertices[j]) == 0) {
+                                edge = true;
+                            }
+                        }
+                        if (edge) {
+                            color.push_back(0.0f);
+                            color.push_back(0.5f);
+                            color.push_back(1.0f);
+                        } else {
+                            color.push_back(0.0f);
+                            color.push_back(1.0f);
+                            color.push_back(0.0f);
+                        }
+                        
+                    } else {
+                        color.push_back(0.6f);
+                        color.push_back(0.6f);
+                        color.push_back(0.6f);
+                    }
+
                     normal.push_back(torus.getNormals()[i][0]);
                     normal.push_back(torus.getNormals()[i][1]);
                     normal.push_back(torus.getNormals()[i][2]);
@@ -1116,147 +1324,204 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
 
 
             //stitching
+            std::vector<std::pair<unsigned int, unsigned int>> used;
             if (withStitching) {
                 //COPY FROM FACE REMOVAL
                 //look for edge vertices for each atom, needed for stitching
-                std::vector<EdgeVerticesOfAtoms> atomEdges;
-                for (int i = 0; i < faceLimit; i += 3) {
-                    //add all edges of all visible triangles
+                if (oldEdgeIdentifier) {
+                    std::vector<EdgeVerticesOfAtoms> atomEdges;
 
-                    //std::cout << "triangle " << i / 3 << ": " << face[i] << "/" << face[i + 1] << "/" << face[i + 2] << std::endl;
-                    EdgeVerticesOfAtoms edge1 = EdgeVerticesOfAtoms(face[i], face[i + 1]);
-                    EdgeVerticesOfAtoms edge2 = EdgeVerticesOfAtoms(face[i + 1], face[i + 2]);
-                    EdgeVerticesOfAtoms edge3 = EdgeVerticesOfAtoms(face[i + 2], face[i]);
+                    //use faceLimit to only look at faces/vertices added for atoms
+                    for (int i = 0; i < faceLimit; i += 3) {
+                        //add all edges of all visible triangles
 
-                    atomEdges.push_back(edge1);
-                    atomEdges.push_back(edge2);
-                    atomEdges.push_back(edge3);
-                }
+                        //std::cout << "triangle " << i / 3 << ": " << face[i] << "/" << face[i + 1] << "/" << face[i + 2] << std::endl;
 
-                //count occurences of each vertex index in each edge
-                //<index, occurences>
-                std::unordered_map<unsigned int, int> vertexCount;
-                for (const auto& edge : atomEdges) {
-                    vertexCount[edge.index1]++;
-                    vertexCount[edge.index2]++;
-                }
+                        EdgeVerticesOfAtoms edge1 = EdgeVerticesOfAtoms(face[i], face[i + 1]);
+                        EdgeVerticesOfAtoms edge2 = EdgeVerticesOfAtoms(face[i + 1], face[i + 2]);
+                        EdgeVerticesOfAtoms edge3 = EdgeVerticesOfAtoms(face[i + 2], face[i]);
 
-                //if a vertex has less than six occurences it's an edge vertex
-                
-                for (auto elem : vertexCount) {
-                    //std::cout << elem.first << " existiert " << elem.second << " mal" << std::endl;
-                    float x = vertex[elem.first * 3];
-                    float y = vertex[(elem.first * 3) + 1];
-                    float z = vertex[(elem.first * 3) + 2];
-                    glm::vec3 vert(x, y, z);
-                    //if a vertex is outside of the vs and has less than 6 occurences in the edge list,
-                    //it is an edge vertice that causes a hole
-                    if (elem.second < 6 && glm::distance(vert, vsCenter) > vsRadius - 0.1f) {
-                        if (std::find(edgeIndices.begin(), edgeIndices.end(), elem.first) == edgeIndices.end()) {
-                            edgeIndices.push_back(elem.first);
+                        atomEdges.push_back(edge1);
+                        atomEdges.push_back(edge2);
+                        atomEdges.push_back(edge3);
+                    }
+
+                    //count occurences of each vertex index in each edge
+                    //<index, occurences>
+                    std::unordered_map<unsigned int, int> vertexCount;
+                    for (const auto& edge : atomEdges) {
+                        vertexCount[edge.index1]++;
+                        vertexCount[edge.index2]++;
+                    }
+
+                    //if a vertex has less than five(?) occurences it's an edge vertex
+
+                    for (auto elem : vertexCount) {
+                        //std::cout << elem.first << " existiert " << elem.second << " mal" << std::endl;
+
+                        //we only care for vertices of the currently used atoms
+                        bool partTwo = elem.first * 3 < icoVertexCount[atomIndex2 + 1];
+                        bool partTwo2 = elem.first * 3 >= icoVertexCount[atomIndex2];
+                        bool partOne = elem.first * 3 < icoVertexCount[atomIndex1 + 1];
+                        bool partOne2 = elem.first * 3 >= icoVertexCount[atomIndex1];
+                        bool inRangeOne = (partOne && partOne2);
+                        bool inRangeTwo = (partTwo && partTwo2);
+                        //std::cout << std::boolalpha;
+                        //std::cout << "partOne = " << (partOne && partOne2) << std::endl;
+                        //std::cout << "partTwo = " << (partTwo && partTwo2) << std::endl;
+                        //std::cout << "Range 1: " << icoVertexCount[atomIndex1] << " <= " << elem.first * 3 << " < " << icoVertexCount[atomIndex1 + 1] << " --> "  << inRangeOne << std::endl;
+                        //std::cout << "Range 2: " << icoVertexCount[atomIndex2] << " <= " << elem.first * 3 << " < " << icoVertexCount[atomIndex2 + 1] << " --> "  << inRangeTwo << std::endl;
+                        if (inRangeOne || inRangeTwo) {
+                            float x = vertex[elem.first * 3];
+                            float y = vertex[(elem.first * 3) + 1];
+                            float z = vertex[(elem.first * 3) + 2];
+                            glm::vec3 vert(x, y, z);
+                            //if a vertex is outside of the vs and has less than 5(?) occurences in the edge list,
+                            //it is an edge vertice that causes a hole
+                            if (/* (elem.second < 6 && glm::distance(vert, vsCenter) < vsRadius + 0.2f) ||*/
+                                (elem.second < 5 && glm::distance(vert, vsCenter) > vsRadius - 0.1f)) {
+                                if (std::find(edgeIndices.begin(), edgeIndices.end(), elem.first) ==
+                                    edgeIndices.end()) {
+                                    edgeIndices.push_back(elem.first);
+                                }
+                            }
                         }
+                    }
+
+                    std::cout << "atomEdgeIndices.size(): " << edgeIndices.size() << std::endl;
+                }
+                //convert indices to vertex values
+
+                //IDEA: split elements in intersec according to their atom, stitch for each stom seperately
+                std::vector<unsigned int> edgeIndicesAtom1;
+                std::vector<unsigned int> edgeIndicesAtom2;
+                for (auto elem : edgeVerticesOption0/*edgeVerticesOption4*/) {
+                    bool partTwo = elem * 3 < icoVertexCount[atomIndex2 + 1];
+                    bool partTwo2 = elem * 3 >= icoVertexCount[atomIndex2];
+                    bool partOne = elem * 3 < icoVertexCount[atomIndex1 + 1];
+                    bool partOne2 = elem * 3 >= icoVertexCount[atomIndex1];
+                    bool inRangeOne = (partOne && partOne2);
+                    bool inRangeTwo = (partTwo && partTwo2);
+
+                    if (inRangeOne) {
+                        edgeIndicesAtom1.push_back(elem);
+                    } else if (inRangeTwo) {
+                        edgeIndicesAtom2.push_back(elem);
                     }
                 }
 
-                std::cout << "atomEdgeIndices.size(): " << edgeIndices.size() << std::endl;
+                std::vector<std::vector<unsigned int>> edgeIndicesForBothAtoms;
+                edgeIndicesForBothAtoms.push_back(edgeIndicesAtom1);
+                edgeIndicesForBothAtoms.push_back(edgeIndicesAtom2);
 
-                //convert indices to vertex values
-                for (auto elem : edgeIndices) {
+                /*
+                for (auto elem : intersec) {
                     //std::cout << elem << std::endl;
+
+                    //color edge vertices in yellow
+                    if (seperateColors) {
+                        color.at(elem * 3) = 0.925f;
+                        color.at((elem * 3) + 1) = 0.929f;
+                        color.at((elem * 3) + 2) = 0.0f;
+                    }
+
                     edgeVerticesAtom.push_back(vertex[elem * 3]);
                     edgeVerticesAtom.push_back(vertex[(elem * 3) + 1]);
                     edgeVerticesAtom.push_back(vertex[(elem * 3) + 2]);
                 }
+                */
                 //ENDE COPY
 
-                for (int i = 0; i < edgeVerticesAtom.size(); i += 3) {
-                    float x = edgeVerticesAtom[i];
-                    float y = edgeVerticesAtom[i + 1];
-                    float z = edgeVerticesAtom[i + 2];
+                std::vector<std::pair<unsigned, unsigned>>().swap(usedVertexPairs);
+                std::cout << "edgeVerticesAtom.size() = " << edgeVerticesAtom.size() << std::endl;
+                int stitchedVertices = 0;
+                for (auto elem : edgeIndicesForBothAtoms) {
+                    for (int i = 0; i < elem.size(); ++i) {
+                        float x = vertex[elem[i] * 3];
+                        float y = vertex[(elem[i] * 3) + 1];
+                        float z = vertex[(elem[i] * 3) + 2];
 
-                    //take current and next vertex of edge vertices of atoms, calculate the closest vertex of torus edge vertices
-                    //form two triangles out of those four vertices
+                        glm::vec3 currentVertex(x, y, z);
+                        //std::cout << "currentVertex: " << currentVertex.x << "/" << currentVertex.y << "/" << currentVertex.z << std::endl;
 
+                        glm::vec3 closestVertexToCurrent = findClosestVertex(currentVertex, torusEdgeVertices);
+                        //std::cout << "closestVertexToCurrent: " << closestVertexToCurrent.x << "/" << closestVertexToCurrent.y << "/" << closestVertexToCurrent.z << std::endl;
 
-                    glm::vec3 currentVertex(x, y, z);
-                    //std::cout << "currentVertex: " << currentVertex.x << "/" << currentVertex.y << "/" << currentVertex.z << std::endl;
+                        //IDEA
+                        //vector with all vertices sorted by distance => take the two points with smallest distance
+                        //PROBLEM: every edge vertex tries to stitch with each torus
+                        std::vector<std::tuple<glm::vec3, float, unsigned int>> nextVertices;
 
-                    glm::vec3 closestVertexToCurrent = findClosestVertex(currentVertex, torusEdgeVertices);
-                    //std::cout << "closestVertexToCurrent: " << closestVertexToCurrent.x << "/" << closestVertexToCurrent.y << "/" << closestVertexToCurrent.z << std::endl;
+                        //Idea use occurences in borderEdges to determine neighbours
+                        std::vector<unsigned int> neighbours;
+                        for (const auto& edge : borderEdges) {
+                            bool first = elem[i] == edge.index1;
+                            bool second = elem[i] == edge.index2;
 
-                    glm::vec3 nextVertex;
-                    //look for the point in edgeVerticesAtom with the smallest spatial distance
-                    //PROBLEM: 1---2-----3
-                    //i = 1  =>  next = 2
-                    //i = 2  =>  next = 1
-                    //next should be 3 to fill the whole structure
-                    float minDist = std::numeric_limits<float>::max();
-                    if (i + 3 < edgeVerticesAtom.size()) {
-                        for (int j = i + 3; j < edgeVerticesAtom.size(); j += 3) {
-                            float next_x = edgeVerticesAtom[j];
-                            float next_y = edgeVerticesAtom[j + 1];
-                            float next_z = edgeVerticesAtom[j + 2];
-                            glm::vec3 next(next_x, next_y, next_z);
-
-                            float distance = glm::distance(currentVertex, next);
-                            if (distance < minDist) {
-                                minDist = distance;
-                                nextVertex = next;
+                            if (first) {
+                                neighbours.push_back(edge.index2);
+                            } else if (second) {
+                                neighbours.push_back(edge.index1);
                             }
                         }
-                    }
-                    if (i - 3 >= 0) {
-                        for (int j = i - 3; j < edgeVerticesAtom.size(); j -= 3) {
-                            float next_x = edgeVerticesAtom[j];
-                            float next_y = edgeVerticesAtom[j + 1];
-                            float next_z = edgeVerticesAtom[j + 2];
+                        
+                        
+                        for (const auto& index : neighbours) {
+                            int firstVertexCount = 0;
+                            std::vector<unsigned int> tempIndicesFirst;
+
+                            float next_x = vertex[index * 3];
+                            float next_y = vertex[(index * 3) + 1];
+                            float next_z = vertex[(index * 3) + 2];
+
                             glm::vec3 next(next_x, next_y, next_z);
 
-                            float distance = glm::distance(currentVertex, next);
-                            if (distance < minDist) {
-                                minDist = distance;
-                                nextVertex = next;
+                            glm::vec3 closestToNext = findClosestVertex(next, torusEdgeVertices);
+
+                            for (const auto& point : {currentVertex, closestVertexToCurrent, closestToNext, next}) {
+                                vertex.push_back(point.x);
+                                vertex.push_back(point.y);
+                                vertex.push_back(point.z);
+                                firstVertexCount += 1;
+
+                                if (seperateColors) {
+                                    color.push_back(0.0f);
+                                    color.push_back(1.0f);
+                                    color.push_back(1.0f);
+                                } else {
+                                    color.push_back(0.6f);
+                                    color.push_back(0.6f);
+                                    color.push_back(0.6f);
+                                }
+
+                                glm::vec3 vertexNormal = glm::normalize(point - center);
+                                normal.push_back(vertexNormal.x);
+                                normal.push_back(vertexNormal.y);
+                                normal.push_back(vertexNormal.z);
+
+                                unsigned int tempIndex = vertex.size() / 3 - 1;
+                                tempIndicesFirst.push_back(tempIndex);
+                                //std::cout << "tempIndex: " << tempIndex << std::endl;
                             }
+
+                            face.push_back(tempIndicesFirst[1]);
+                            face.push_back(tempIndicesFirst[2]);
+                            face.push_back(tempIndicesFirst[0]);
+
+                            face.push_back(tempIndicesFirst[3]);
+                            face.push_back(tempIndicesFirst[0]);
+                            face.push_back(tempIndicesFirst[2]);
+
+                            //usedVertexPairs.push_back(firstVertexPair);
+
+                            offset += firstVertexCount;
+                            
                         }
+                        stitchedVertices++;
+                        
                     }
-                    //std::cout << "nextVertex: " << nextVertex.x << "/" << nextVertex.y << "/" << nextVertex.z << std::endl;
-
-                    glm::vec3 closestVertexToNext = findClosestVertex(nextVertex, torusEdgeVertices);
-                    //std::cout << "closestVertexToNext: " << closestVertexToNext.x << "/" << closestVertexToNext.y << "/" << closestVertexToNext.z << std::endl;
-                    
-
-
-                    
-                    std::vector<unsigned int> tempIndices;
-                    for (const auto& point : {currentVertex, closestVertexToCurrent, closestVertexToNext, nextVertex}) {
-                        vertex.push_back(point.x);
-                        vertex.push_back(point.y);
-                        vertex.push_back(point.z);
-
-                        color.push_back(0.0f);
-                        color.push_back(1.0f);
-                        color.push_back(1.0f);
-
-                        glm::vec3 vertexNormal = glm::normalize(point - center);
-                        normal.push_back(vertexNormal.x);
-                        normal.push_back(vertexNormal.y);
-                        normal.push_back(vertexNormal.z);
-
-                        unsigned int tempIndex = vertex.size() / 3 - 1;
-                        tempIndices.push_back(tempIndex);
-                        //std::cout << "tempIndex: " << tempIndex << std::endl;
-                    }
-
-                    face.push_back(tempIndices[1]);
-                    face.push_back(tempIndices[2]);
-                    face.push_back(tempIndices[0]);
-
-                    face.push_back(tempIndices[3]);
-                    face.push_back(tempIndices[0]);
-                    face.push_back(tempIndices[2]);
-                    
                 }
-                
+                std::cout << "stitchedVertices: " << stitchedVertices << std::endl;
             }
 
             if (renderPS) {
