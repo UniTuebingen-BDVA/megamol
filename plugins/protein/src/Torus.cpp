@@ -70,9 +70,34 @@ void Torus::generateTorus(float probeRadius, glm::vec3 axisUnitVec, float rotati
             glm::vec3 vertex(x, y, z);
             addVertex(x, y, z);
 
+            //tried to interpolate the normals to get a smooth transition from stitching triangles to torus
+            //not working as expected
+            /*
+            glm::vec3 probePos = getProbePos(center, radius, probeRadius, vertex, rotationAngle, axisUnitVec);
+            glm::vec3 contactPoint(0, 0, 0);
+            glm::vec3 contactNormal(0, 0, 0);
+            float dist = 0.0f;
+            float dist1 = glm::distance(vertex, atomPos1);
+            float dist2 = glm::distance(vertex, atomPos2);
+            if (dist1 < dist2) {
+                contactPoint = getContactPoint(probePos, atomPos1, atomRadius1);
+                contactNormal = glm::normalize(contactPoint - atomPos1);
+                dist = dist1;
+            } else {
+                contactPoint = getContactPoint(probePos, atomPos2, atomRadius2);
+                contactNormal = glm::normalize(contactPoint - atomPos2);
+                dist = dist2;
+            }
+            float interpolationDist = radius / 10;
+
+            float interpolationFactor = glm::clamp(dist / interpolationDist, 0.0f, 1.0f);
+
+            glm::vec3 normal = glm::normalize(glm::mix(contactNormal, glm::normalize(vertex), interpolationFactor));
+            */
+
             indices.push_back(vertices.size() - 1 + offset);
 
-            glm::vec3 normal = glm::normalize(vertex);
+            glm::vec3 normal(glm::normalize(vertex));
             addNormal(normal);
         }
     }
@@ -104,7 +129,7 @@ void Torus::generateTorus(float probeRadius, glm::vec3 axisUnitVec, float rotati
         }
     }
 
-    std::cout << "vertices_size: " << vertices.size() << std::endl;
+    //std::cout << "vertices_size: " << vertices.size() << std::endl;
 
     //add face indices only if all three points of a triangle are inside the visibility sphere
     for (int i = 0; i < numRings; ++i) {
@@ -197,7 +222,7 @@ void Torus::generateTorus(float probeRadius, glm::vec3 axisUnitVec, float rotati
         std::cout << elem.x << "/" << elem.y << "/" << elem.z << std::endl;
     }
     std::cout << "END OF EDGE VERTICES" << std::endl;*/
-    std::cout << "edgeVertices.size() (torus) = " << edgeVertices.size() << std::endl;
+    //std::cout << "edgeVertices.size() (torus) = " << edgeVertices.size() << std::endl;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -217,7 +242,7 @@ const glm::vec3 Torus::getProbePos(const glm::vec3& torusCenter, float torusRad,
     //tranform probe center
     glm::vec4 transformedTubeCenter = transformationMatrix * glm::vec4(tubeCenter, 1.0f);
     glm::vec3 probePos = glm::vec3(transformedTubeCenter);
-    std::cout << "probePos: " << probePos.x << "/" << probePos.y << "/" << probePos.z << std::endl;
+    //std::cout << "probePos: " << probePos.x << "/" << probePos.y << "/" << probePos.z << std::endl;
     
     return probePos;
 }
@@ -232,7 +257,7 @@ const glm::vec3 Torus::getContactPoint(const glm::vec3& probePos, glm::vec3 atom
 
     //glm::vec3 contactPoint = (temp * atomRad) / tempLength;
     glm::vec3 contactPoint = atomPos + tempNorm * atomRad;
-    std::cout << "contactPoint: " << contactPoint.x << "/" << contactPoint.y << "/" << contactPoint.z << std::endl;
+    //std::cout << "contactPoint: " << contactPoint.x << "/" << contactPoint.y << "/" << contactPoint.z << std::endl;
 
     return contactPoint;
 }
@@ -247,11 +272,11 @@ const std::pair<glm::vec3, float> Torus::getVisibilitySphere(glm::vec3 contactPo
 
     //a_i = atomPos1 (vec3)
     glm::vec3 a_i = atomPos1;
-    std::cout << "atomPos1 = " << a_i.x << "/" << a_i.y << "/" << a_i.z << std::endl;
+    //std::cout << "atomPos1 = " << a_i.x << "/" << a_i.y << "/" << a_i.z << std::endl;
 
     //a_j = atomPos2 (vec3)
     glm::vec3 a_j = atomPos2;
-    std::cout << "atomPos2 = " << a_j.x << "/" << a_j.y << "/" << a_j.z << std::endl;
+    //std::cout << "atomPos2 = " << a_j.x << "/" << a_j.y << "/" << a_j.z << std::endl;
 
     //x = contactPoint (vec3)
     glm::vec3 x = contactPoint;
@@ -259,7 +284,7 @@ const std::pair<glm::vec3, float> Torus::getVisibilitySphere(glm::vec3 contactPo
 
     //t_ij = torusCenter (vec3)
     glm::vec3 t_ij = torusCenter;
-    std::cout << "torusCenter = " << t_ij.x << "/" << t_ij.y << "/" << t_ij.z << std::endl;
+    //std::cout << "torusCenter = " << t_ij.x << "/" << t_ij.y << "/" << t_ij.z << std::endl;
 
     //c' = (|p - a_i| / (|p - a_j| + |p - a_i|)) * (a_j - a_i) (vec3)
     //=> added (+ t_ij)
@@ -273,8 +298,8 @@ const std::pair<glm::vec3, float> Torus::getVisibilitySphere(glm::vec3 contactPo
     //more accurate with |x - c|
     float r_vs = glm::distance(x, c /*c_*/) /* - 0.1375f*/;
 
-    std::cout << "vsCenter = " << c.x << "/" << c.y << "/" << c.z << std::endl;
-    std::cout << "vsRad = " << r_vs << std::endl;
+    //std::cout << "vsCenter = " << c.x << "/" << c.y << "/" << c.z << std::endl;
+    //std::cout << "vsRad = " << r_vs << std::endl;
 
     std::pair<glm::vec3, float> visibilitySphere(c, r_vs);
 
