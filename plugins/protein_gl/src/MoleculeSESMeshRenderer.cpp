@@ -612,6 +612,19 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                     color.push_back(1.0f);
                     color.push_back(0.0f);
                     color.push_back(0.0f);
+                    /*if (i == 0) {
+                        color.push_back(1.0f);
+                        color.push_back(0.0f);
+                        color.push_back(0.0f);
+                    } else if (i == 1) {
+                        color.push_back(1.0f);
+                        color.push_back(0.0f);
+                        color.push_back(1.0f);
+                    } else if (i == 2) {
+                        color.push_back(0.4f);
+                        color.push_back(0.9f);
+                        color.push_back(0.8f);
+                    }*/
                 } else {
                     color.push_back(0.6f);
                     color.push_back(0.6f);
@@ -676,43 +689,6 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
         bla = {1, 2};
         int xx = std::get<1>(bla);
 
-        //TEST KUGEL ZUM DEBUGGEN in grün
-        /*
-    std::vector<int> zusatz = {79, 80, 337, 248, 86, 87, 89, 93, 95, 32, 97, 17, 110, 111, 116, 120}; //84 == 80 247 oder 333
-
-        for (int i : zusatz) {
-
-
-            for (int j = 0; j < ico->getVertexCount(); j++) {
-                vertex.push_back(ico->getVertices()[j][0] * 0.01 + vertex.at(i * 3 + 0)); // x
-                vertex.push_back(ico->getVertices()[j][1] * 0.01 + vertex.at(i * 3 + 1));
-                vertex.push_back(ico->getVertices()[j][2] * 0.01 + vertex.at(i * 3 + 2));
-
-                //normal[ico->getVertexCount() * 3 * i + 3 * j + 0] = ico->getNormals()[3 * j + 0];
-                normal.push_back(ico->getNormals()[j][0]);
-                normal.push_back(ico->getNormals()[j][1]);
-                normal.push_back(ico->getNormals()[j][2]);
-
-                if (i == 80) {
-                    color.push_back(1);
-                    color.push_back(0);
-                    color.push_back(0);
-                } else if (i == 337) {
-                    color.push_back(0);
-                    color.push_back(0);
-                    color.push_back(1);
-                } else if (i == 17) {
-                    color.push_back(0);
-                    color.push_back(1);
-                    color.push_back(1);
-                } else {
-                    color.push_back(0);
-                    color.push_back(1);
-                    color.push_back(0);
-                }
-            }
-        }
-        */
         int face_counter = (int)(ico->getIndexCount() * atomCnt);
         std::vector<std::vector<std::tuple<unsigned int, int>>> referenceToOtherVertice(
             ico->getVertexCount() * atomCnt);
@@ -1069,22 +1045,13 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
 
                 }
                 face = std::move(newFace);
-                faceLimit = face.size();              
-                /*
-                for (const auto& elem : borderVertices) {
-                    if (seperateColors) {
-                        color.at(elem * 3) = 0.925f;
-                        color.at((elem * 3) + 1) = 0.929f;
-                        color.at((elem * 3) + 2) = 0.0f;
-                    }
-                }
-                */
+                faceLimit = face.size();
             }
             
             //add generated vertices of torus to global vertex structure
             int acceptedVertices = 0;
             for (int i = 0; i < torus.getVertexCount(); i++) {
-                //need to add all vertices, remove torus triangles outside of vs by only adding those to face, ignore next comment
+                //need to add all vertices, remove torus triangles outside of vs by not adding those to face, ignore next comment
                 //only add vertex, color and normal if vertex is inside visibility sphere
                 if (torus.getVertices_bool(i) == true) {
                     vertex.push_back(torus.getVertices()[i][0]);
@@ -1106,8 +1073,7 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                             color.push_back(0.0f);
                             color.push_back(1.0f);
                             color.push_back(0.0f);
-                        }
-                        
+                        }                        
                     } else {
                         color.push_back(0.6f);
                         color.push_back(0.6f);
