@@ -557,10 +557,10 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
 
     int atomCnt = mol->AtomCount();
     if (isDebug) {
-        atomCnt = 2;
+        atomCnt = 4;
     }
 
-    bool seperateColors = false;
+    bool seperateColors = true;
 
     ctmd->SetFrameCount(1);
     ctmd->AccessBoundingBoxes() = mol->AccessBoundingBoxes();
@@ -1067,8 +1067,8 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                         }
                         if (edge) {
                             color.push_back(0.0f);
-                            color.push_back(0.5f);
                             color.push_back(1.0f);
+                            color.push_back(0.0f);
                         } else {
                             color.push_back(0.0f);
                             color.push_back(1.0f);
@@ -1155,9 +1155,15 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                 if (stitchingOption1) {
                     // go over all edges for each atom seperately
                     for (auto elem : edgeIndicesForBothAtomsAlt) {
-                        glm::vec3 atomPos(mol->AtomPositions()[3 * elem[0].first + 0],
-                            mol->AtomPositions()[3 * elem[0].first + 1], mol->AtomPositions()[3 * elem[0].first + 2]);
                         for (int i = 0; i < elem.size(); ++i) {
+                            std::cout << elem[i].first << std::endl;
+                        }
+                        
+                        for (int i = 0; i < elem.size(); ++i) {
+                            glm::vec3 atomPos(mol->AtomPositions()[3 * elem[i].first + 0],
+                                mol->AtomPositions()[3 * elem[i].first + 1],
+                                mol->AtomPositions()[3 * elem[i].first + 2]);
+
                             float x = vertex[elem[i].second * 3];
                             float y = vertex[(elem[i].second * 3) + 1];
                             float z = vertex[(elem[i].second * 3) + 2];
@@ -1214,7 +1220,7 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                                     stitchingVertexCount += 1;
 
                                     if (seperateColors) {
-                                        color.push_back(0.0f);
+                                        color.push_back(0.1f);
                                         color.push_back(1.0f);
                                         color.push_back(1.0f);
                                     } else {
@@ -1384,9 +1390,9 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                     vertex.push_back(vsVertex.y);
                     vertex.push_back(vsVertex.z);
 
+                    color.push_back(1.0f);
+                    color.push_back(0.65f);
                     color.push_back(0.0f);
-                    color.push_back(1.0f);
-                    color.push_back(1.0f);
 
                     normal.push_back(vsVertexNormal.x);
                     normal.push_back(vsVertexNormal.y);
@@ -1414,7 +1420,7 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                     vertex.push_back(vsVertex.y);
                     vertex.push_back(vsVertex.z);
 
-                    color.push_back(1.0f);
+                    color.push_back(0.0f);
                     color.push_back(1.0f);
                     color.push_back(0.0f);
 
@@ -1431,7 +1437,7 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
             if (coloredContactPoint) {
                 int lat = 30;
                 int lon = 60;
-                std::vector<glm::vec3> currentVSVertices = calcVSVertices(contactPoint, 0.05f, lat, lon);
+                std::vector<glm::vec3> currentVSVertices = calcVSVertices(contactPoint, 0.0125f, lat, lon);
                 std::vector<unsigned int> vsVertexIndices;
 
                 for (glm::vec3 vsVertex : currentVSVertices) {

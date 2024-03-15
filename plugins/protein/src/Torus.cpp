@@ -20,7 +20,7 @@
 
 Torus::Torus(glm::vec3 center, float radius, int numSegments, int numRings)
         : center(center)
-        , radius(radius) //inner radius
+        , radius(radius) 
         , numSegments(numSegments)
         , numRings(numRings) {}
 
@@ -263,7 +263,6 @@ const glm::vec3 Torus::getContactPoint(const glm::vec3& probePos, glm::vec3 atom
 }
 
 
-//r_vs is too big, need to find out why. currently subtratcting some small value manually
 const std::pair<glm::vec3, float> Torus::getVisibilitySphere(glm::vec3 contactPoint, glm::vec3 probePos, glm::vec3 atomPos1, glm::vec3 atomPos2, glm::vec3 torusCenter) {
 
     //p = probePos (vec3)
