@@ -8,10 +8,6 @@
 
 #define _USE_MATH_DEFINES 1
 
-#ifndef M_PI
-#define M_PI 3.141592653589793238462643383279502884L
-#endif
-
 #include "MoleculeSESMeshRenderer.h"
 #include "glm/gtx/string_cast.hpp"
 #include "mmcore/param/BoolParam.h"
@@ -39,6 +35,7 @@
 #include <fstream>
 #include <iostream>
 #include <cmath>
+#include <chrono>
 
 #include <fstream>
 
@@ -557,10 +554,10 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
 
     int atomCnt = mol->AtomCount();
     if (isDebug) {
-        atomCnt = 4;
+        atomCnt = 2;
     }
 
-    bool seperateColors = true;
+    bool seperateColors = false;
 
     ctmd->SetFrameCount(1);
     ctmd->AccessBoundingBoxes() = mol->AccessBoundingBoxes();
@@ -626,9 +623,9 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                         color.push_back(0.8f);
                     }*/
                 } else {
-                    color.push_back(0.6f);
-                    color.push_back(0.6f);
-                    color.push_back(0.6f);
+                    color.push_back(0.9f);
+                    color.push_back(0.9f);
+                    color.push_back(0.9f);
                 }
 
                 muss_raus.push_back(false);
@@ -849,7 +846,9 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
         bool withStitching = true;
         bool withEdgeVerticesOption0 = true;
 
+        //WORKING
         bool stitchingOption1 = true;
+        //TEST
         bool stitchingOption2 = false;
 
         /////DEBUG///////////////////////
@@ -880,10 +879,15 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
 
         //generate torus for every colliding atom pair
         for (auto elem : atomCollisions) {
+            auto torusTimeStart = std::chrono::high_resolution_clock::now();
+
             edgeIndices.clear();
             std::vector<unsigned int>().swap(edgeIndices);
             edgeVerticesAtom.clear();
             std::vector<float>().swap(edgeVerticesAtom);
+
+            auto torusGeneratingTimeStart = std::chrono::high_resolution_clock::now();
+
             //values of colliding atoms
             unsigned int atomIndex1 = elem.first;
             unsigned int atomIndex2 = elem.second;
@@ -894,8 +898,8 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
             float atomRadius1 = mol->AtomTypes()[mol->AtomTypeIndices()[atomIndex1]].Radius();
             float atomRadius2 = mol->AtomTypes()[mol->AtomTypeIndices()[atomIndex2]].Radius();
 
-            std::cout << "atomRadius1: " << atomRadius1 << std::endl;
-            std::cout << "atomRadius2: " << atomRadius2 << std::endl;
+            //std::cout << "atomRadius1: " << atomRadius1 << std::endl;
+            //std::cout << "atomRadius2: " << atomRadius2 << std::endl;
 
             glm::vec3 atomPos1(mol->AtomPositions()[3 * atomIndex1 + 0], mol->AtomPositions()[3 * atomIndex1 + 1],
                 mol->AtomPositions()[3 * atomIndex1 + 2]);
@@ -914,6 +918,10 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
             //torus generation
             Torus torus(center, radius, numSegments, numRings);
             torus.generateTorus(probeRadius, axisUnitVec, rotationAngle, offset, atomPos1, atomPos2, atomRadius1, atomRadius2);
+
+            auto torusGeneratingTimeEnd = std::chrono::high_resolution_clock::now();
+            auto torusGeneratingDuration = std::chrono::duration_cast<std::chrono::milliseconds>(torusGeneratingTimeEnd - torusGeneratingTimeStart);
+            std::cout << "Milliseconds neede for torus generation: " << torusGeneratingDuration.count() << std::endl;
 
             //Visibility Sphere: used to remove vertices of atoms inside of visibility sphere
             //dummy point for visibility sphere
@@ -945,6 +953,8 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
             std::vector<unsigned int> edgeVertices;
             std::vector<EdgeVerticesOfAtoms> borderEdges;
             if (faceRemoval) {
+                auto faceRemovalTimeStart = std::chrono::high_resolution_clock::now();
+
                 //if a vertex is inside of the visibility sphere its triangle needs to be removed
                 std::vector<unsigned int> indicesToRemove;
                 std::vector<bool> vertexRemoved;
@@ -1046,8 +1056,13 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                 }
                 face = std::move(newFace);
                 faceLimit = face.size();
+
+                auto faceRemovalTimeEnd = std::chrono::high_resolution_clock::now();
+                auto faceRemovalDuration = std::chrono::duration_cast<std::chrono::milliseconds>(faceRemovalTimeEnd - faceRemovalTimeStart);
+
+                std::cout << "Milliseconds needed for face removal: " << faceRemovalDuration.count() << std::endl;
             }
-            
+
             //add generated vertices of torus to global vertex structure
             int acceptedVertices = 0;
             for (int i = 0; i < torus.getVertexCount(); i++) {
@@ -1075,9 +1090,9 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                             color.push_back(0.0f);
                         }                        
                     } else {
-                        color.push_back(0.6f);
-                        color.push_back(0.6f);
-                        color.push_back(0.6f);
+                        color.push_back(0.9f);
+                        color.push_back(0.9f);
+                        color.push_back(0.9f);
                     }
 
                     normal.push_back(torus.getNormals()[i][0]);
@@ -1088,15 +1103,15 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                     vertex.push_back(torus.getVertices()[i][0]);
                     vertex.push_back(torus.getVertices()[i][1]);
                     vertex.push_back(torus.getVertices()[i][2]);
-                    color.push_back(0.0f);
-                    color.push_back(0.0f);
-                    color.push_back(0.0f);
+                    color.push_back(0.9f);
+                    color.push_back(0.9f);
+                    color.push_back(0.9f);
                     normal.push_back(torus.getNormals()[i][0]);
                     normal.push_back(torus.getNormals()[i][1]);
                     normal.push_back(torus.getNormals()[i][2]);
                 }
             }
-            std::cout << "accepted torus vertices: " << acceptedVertices << std::endl;
+            //std::cout << "accepted torus vertices: " << acceptedVertices << std::endl;
 
             //add generated face indices to global face index structure
             for (int i = 0; i < torus.getFaceIndicesCount(); i++) {
@@ -1112,6 +1127,9 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
 
             //stitching
             if (withStitching) {
+
+                auto stitchingTimeStart = std::chrono::high_resolution_clock::now();
+
                 //convert indices to vertex values
                 //IDEA: split elements in edgeVertices according to their atom, stitch for each stom seperately
                 std::vector<unsigned int> edgeIndicesAtom1;
@@ -1154,15 +1172,11 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                 //generates four triangles for eacht group of four points instead of two triangles
                 if (stitchingOption1) {
                     // go over all edges for each atom seperately
-                    for (auto elem : edgeIndicesForBothAtomsAlt) {
-                        for (int i = 0; i < elem.size(); ++i) {
-                            std::cout << elem[i].first << std::endl;
-                        }
-                        
+                    for (auto elem : edgeIndicesForBothAtomsAlt) {                       
                         for (int i = 0; i < elem.size(); ++i) {
                             glm::vec3 atomPos(mol->AtomPositions()[3 * elem[i].first + 0],
-                                mol->AtomPositions()[3 * elem[i].first + 1],
-                                mol->AtomPositions()[3 * elem[i].first + 2]);
+                                              mol->AtomPositions()[3 * elem[i].first + 1],
+                                              mol->AtomPositions()[3 * elem[i].first + 2]);
 
                             float x = vertex[elem[i].second * 3];
                             float y = vertex[(elem[i].second * 3) + 1];
@@ -1220,13 +1234,13 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                                     stitchingVertexCount += 1;
 
                                     if (seperateColors) {
-                                        color.push_back(0.1f);
-                                        color.push_back(1.0f);
+                                        color.push_back(0.0f);
+                                        color.push_back(0.0f);
                                         color.push_back(1.0f);
                                     } else {
-                                        color.push_back(0.6f);
-                                        color.push_back(0.6f);
-                                        color.push_back(0.6f);
+                                        color.push_back(0.9f);
+                                        color.push_back(0.9f);
+                                        color.push_back(0.9f);
                                     }
 
                                     glm::vec3 vertexNormal = glm::normalize(point - atomPos);
@@ -1261,9 +1275,11 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                 //problem: only renders the backside of some triangles
                 if (stitchingOption2) {
                     for (auto elem : edgeIndicesForBothAtomsAlt) {
-                        glm::vec3 atomPos(mol->AtomPositions()[3 * elem[0].first + 0],
-                            mol->AtomPositions()[3 * elem[0].first + 1], mol->AtomPositions()[3 * elem[0].first + 2]);
+                        
                         for (int i = 0; i < elem.size(); ++i) {
+                            glm::vec3 atomPos(mol->AtomPositions()[3 * elem[i].first + 0],
+                                mol->AtomPositions()[3 * elem[i].first + 1],
+                                mol->AtomPositions()[3 * elem[i].first + 2]);
                             float x = vertex[elem[i].second * 3];
                             float y = vertex[(elem[i].second * 3) + 1];
                             float z = vertex[(elem[i].second * 3) + 2];
@@ -1332,9 +1348,9 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                                             color.push_back(1.0f);
                                             color.push_back(1.0f);
                                         } else {
-                                            color.push_back(0.6f);
-                                            color.push_back(0.6f);
-                                            color.push_back(0.6f);
+                                            color.push_back(0.9f);
+                                            color.push_back(0.9f);
+                                            color.push_back(0.9f);
                                         }
 
                                         glm::vec3 vertexNormal = glm::normalize(point - atomPos);
@@ -1372,6 +1388,9 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                     }
                 }
                 //std::cout << "stitchedVertices: " << stitchedVertices << std::endl;
+                auto stitchingTimeEnd = std::chrono::high_resolution_clock::now();
+                auto stitchingDuration = std::chrono::duration_cast<std::chrono::milliseconds>(stitchingTimeEnd - stitchingTimeStart);
+                std::cout << "Milliseconds needed for stitching: " << stitchingDuration.count() << std::endl;
             }
 
             if (renderPS) {
@@ -1390,9 +1409,9 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
                     vertex.push_back(vsVertex.y);
                     vertex.push_back(vsVertex.z);
 
-                    color.push_back(1.0f);
-                    color.push_back(0.65f);
                     color.push_back(0.0f);
+                    color.push_back(0.0f);
+                    color.push_back(1.0f);
 
                     normal.push_back(vsVertexNormal.x);
                     normal.push_back(vsVertexNormal.y);
@@ -1437,7 +1456,7 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
             if (coloredContactPoint) {
                 int lat = 30;
                 int lon = 60;
-                std::vector<glm::vec3> currentVSVertices = calcVSVertices(contactPoint, 0.0125f, lat, lon);
+                std::vector<glm::vec3> currentVSVertices = calcVSVertices(contactPoint, 0.0175f, lat, lon);
                 std::vector<unsigned int> vsVertexIndices;
 
                 for (glm::vec3 vsVertex : currentVSVertices) {
@@ -1508,6 +1527,10 @@ bool MoleculeSESMeshRenderer::getTriangleDataCallback(core::Call& caller) {
 
             //update offset
             offset += torus.getVertexCount();
+
+            auto torusTimeEnd = std::chrono::high_resolution_clock::now();
+            auto torusDuration = std::chrono::duration_cast<std::chrono::milliseconds>(torusTimeEnd - torusTimeStart);
+            std::cout << "Milliseconds needed to generate toroidal patch: " << torusDuration.count() << std::endl;
         }
         
         

@@ -49,11 +49,11 @@ void Torus::generateTorus(float probeRadius, glm::vec3 axisUnitVec, float rotati
     if (atomRadius1 <= atomRadius2) {
         contactPoint = getContactPoint(probePos, atomPos1, atomRadius1);
         visibilitySphere = getVisibilitySphere(contactPoint, probePos, atomPos1, atomPos2, center);
-        std::cout << "used atom1 for contact point" << std::endl;
+        //std::cout << "used atom1 for contact point" << std::endl;
     } else {
         contactPoint = getContactPoint(probePos, atomPos2, atomRadius2);
         visibilitySphere = getVisibilitySphere(contactPoint, probePos, atomPos2, atomPos1, center);
-        std::cout << "used atom2 for contact point" << std::endl;
+        //std::cout << "used atom2 for contact point" << std::endl;
     }
 
 
